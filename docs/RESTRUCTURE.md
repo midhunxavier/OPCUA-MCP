@@ -68,7 +68,7 @@ What stays duplicated (accepted): ~10 lines of per-tool logic per language.
 | 3 | npm rename across all leak points | ✅ done |
 | 4 | Shared contract + parity test | ✅ done |
 | 5 | Docs consolidation | ✅ done |
-| 6 | Final validation & PR | ⬜ todo |
+| 6 | Final validation & PR | ✅ done |
 
 ### Phase 1 — Folder reorg (done)
 - `git mv` the three projects into `packages/` (`mock-server`, `server-python`,

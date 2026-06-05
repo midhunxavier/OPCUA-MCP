@@ -26,9 +26,9 @@ opcua-mcp/
 ├── .mcp.json.example          # committed template
 ├── pyproject.toml             # uv WORKSPACE root          (Phase 2)
 ├── uv.lock                    # single lockfile            (Phase 2)
-├── .github/workflows/ci.yml   # + contract-sync + parity   (Phase 4)
+├── .github/workflows/ci.yml   # build (copies contract) + parity test
 ├── contract/tools.json        # SINGLE SOURCE OF TRUTH     (Phase 4)
-├── scripts/sync-contract.mjs  # propagate contract         (Phase 4)
+│     (Node copies it into build/ at build time; Python reads it directly)
 ├── docs/{testing.md, examples.md, RESTRUCTURE.md}
 ├── packages/
 │   ├── mock-server/           # was opcua-local-server
@@ -39,22 +39,22 @@ opcua-mcp/
 
 ## The shared contract (Phase 4 — core value)
 
-A file at the repo root does **not** travel inside a published npm tarball or pip
-wheel, so "both load the same file" needs propagation, not just a relative path.
+There is exactly one source of truth, `contract/tools.json` (per-tool `name`,
+`description`, `inputSchema`, `capability` = `null` | `history` | `aggregate`, plus
+the capability probe node IDs). Implemented **simpler than the original copy+sync
+plan**: nothing is duplicated, so the two servers cannot drift and no sync-check is
+needed.
 
-- `contract/tools.json` is the source of truth: per-tool `name`, `description`,
-  `inputSchema`, and `capability` (`null` | `history` | `aggregate`), plus the
-  capability probe node IDs (`ns=0;i=11193`, `ns=0;i=2997`).
-- `scripts/sync-contract.mjs` copies it into `packages/server-node/src/contract.json`
-  and `packages/server-python/src/opcua_mcp_server/contract.json`. The copies are
-  committed (so a fresh clone builds) but generated; CI re-runs sync and fails on
-  any `git diff`.
-- **TS**: `ListTools` returns `contract.tools` filtered by passed capability probes
-  (`resolveJsonModule` is already on). Build copies the JSON into `build/`.
-- **Python (FastMCP)**: reads descriptions + capability node IDs from the contract;
-  a **parity test** asserts the FastMCP-derived schema equals the contract.
-- `tests/test_contract_parity.py` loads the contract, lists tools on both servers,
-  and asserts both advertise exactly the contract's tools with identical schemas.
+- **Node**: builds `tools/list` directly from the contract, filtered by the runtime
+  capability probes (history/aggregate). `npm run build` runs
+  `packages/server-node/scripts/copy-contract.mjs`, copying the contract into
+  `build/contract.json` so the published npm package is self-contained.
+- **Python (FastMCP)**: reads tool descriptions and the capability node IDs straight
+  from `contract/tools.json` (resolved relative to the package). Input schemas stay
+  signature-derived and are checked against the contract by the parity test.
+- `tests/test_contract_parity.py` lists tools on both servers and asserts each
+  advertises exactly the contract's applicable tools, with matching descriptions
+  and parameter sets. Runs as part of the normal suite (and CI).
 
 What stays duplicated (accepted): ~10 lines of per-tool logic per language.
 
@@ -66,7 +66,7 @@ What stays duplicated (accepted): ~10 lines of per-tool logic per language.
 | 1 | Folder reorg, behavior-neutral | ✅ done |
 | 2 | Python: uv workspace + real package | ✅ done |
 | 3 | npm rename across all leak points | ✅ done |
-| 4 | Shared contract + parity test | ⬜ todo |
+| 4 | Shared contract + parity test | ✅ done |
 | 5 | Docs consolidation | ⬜ todo |
 | 6 | Final validation & PR | ⬜ todo |
 

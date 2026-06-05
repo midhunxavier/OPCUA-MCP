@@ -1,0 +1,197 @@
+{
+  "$comment": "Single source of truth for the OPC UA MCP tool surface shared by both servers. The Node server builds its tools/list response directly from this file (copied into build/ at build time). The Python (FastMCP) server reads tool descriptions and the capability node IDs from it; its signature-derived input schemas are checked against this file by tests/test_contract_parity.py. To add or change a tool: edit this file, then update each server's per-tool logic (Node: a case in the CallTool switch; Python: the @mcp.tool function), and add an E2E test.",
+  "capabilities": {
+    "history": {
+      "nodeId": "ns=0;i=11193",
+      "browseName": "AccessHistoryDataCapability",
+      "check": "readBooleanTrue"
+    },
+    "aggregate": {
+      "nodeId": "ns=0;i=2997",
+      "browseName": "AggregateFunctions",
+      "check": "browseNonEmpty"
+    }
+  },
+  "tools": [
+    {
+      "name": "read_opcua_node",
+      "capability": null,
+      "description": "Read the value of a specific OPC UA node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
+          }
+        },
+        "required": ["node_id"]
+      }
+    },
+    {
+      "name": "write_opcua_node",
+      "capability": null,
+      "description": "Write a value to a specific OPC UA node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=3'."
+          },
+          "value": {
+            "type": "string",
+            "description": "The value to write to the node. Will be converted based on node type."
+          }
+        },
+        "required": ["node_id", "value"]
+      }
+    },
+    {
+      "name": "browse_opcua_node_children",
+      "capability": null,
+      "description": "Browse the children of a specific OPC UA node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID to browse (e.g., 'ns=0;i=85' for Objects folder)."
+          }
+        },
+        "required": ["node_id"]
+      }
+    },
+    {
+      "name": "read_multiple_opcua_nodes",
+      "capability": null,
+      "description": "Read the values of multiple OPC UA nodes in a single request",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "A list of OPC UA node IDs to read (e.g., ['ns=2;i=2', 'ns=2;i=3'])."
+          }
+        },
+        "required": ["node_ids"]
+      }
+    },
+    {
+      "name": "write_multiple_opcua_nodes",
+      "capability": null,
+      "description": "Write values to multiple OPC UA nodes in a single request",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes_to_write": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "node_id": { "type": "string" },
+                "value": { "type": "string" }
+              },
+              "required": ["node_id", "value"]
+            },
+            "description": "A list of objects containing 'node_id' and 'value'. Example: [{'node_id': 'ns=2;i=2', 'value': '10.5'}, {'node_id': 'ns=2;i=3', 'value': 'active'}]"
+          }
+        },
+        "required": ["nodes_to_write"]
+      }
+    },
+    {
+      "name": "call_opcua_method",
+      "capability": null,
+      "description": "Call a method on a specific OPC UA object node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "object_node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID of the object that contains the method. Example: 'ns=2;i=1' for the Methods folder."
+          },
+          "method_node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID of the method to call. Example: 'ns=2;i=2' for StartProduction method."
+          },
+          "arguments": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of arguments to pass to the method. Arguments will be converted to appropriate OPC UA variants."
+          }
+        },
+        "required": ["object_node_id", "method_node_id"]
+      }
+    },
+    {
+      "name": "get_all_variables",
+      "capability": null,
+      "description": "Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "read_history_opcua_node",
+      "capability": "history",
+      "description": "Read the historical values of a specific OPC UA node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Beginning of the retrieval"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "End of the retrieval"
+          },
+          "num_values": {
+            "type": "number",
+            "description": "Number of values to read (default: unlimited)"
+          }
+        },
+        "required": ["node_id"]
+      }
+    },
+    {
+      "name": "read_aggregate_opcua_node",
+      "capability": "aggregate",
+      "description": "Calculate the historical aggregates over a defined time range, divided into smaller chunks defined by the `processing_interval` (in milliseconds). The server divides the [`start_time`, `end_time`] domain into these intervals, returning one aggregated value per interval",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Beginning of the retrieval"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "End of the retrieval (defaults to 'now')"
+          },
+          "aggregate_function": {
+            "type": "string",
+            "description": "The specific formula"
+          },
+          "processing_interval": {
+            "type": "number",
+            "description": "The duration (ms) for each computed value. If set to 0, the server calculates a single aggregate value for the entire range."
+          }
+        },
+        "required": ["node_id", "start_time", "aggregate_function"]
+      }
+    }
+  ]
+}

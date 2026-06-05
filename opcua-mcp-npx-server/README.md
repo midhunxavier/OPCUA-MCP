@@ -12,6 +12,8 @@ An NPX-based Model Context Protocol (MCP) server for OPC UA operations. This ser
 - **Get All Variables**: Discover all available variables in the OPC UA server address space
 - **Automatic Type Conversion**: Intelligent conversion of values based on node data types
 - **Connection Management**: Automatic connection handling with graceful disconnection
+- **Read History OPC UA Node**: Read the historical values of a specific OPC UA node (if supported by the server)
+- **Read Aggregate OPC UA Node**: Calculate the historical aggregates (if supported by the server)
 
 ## Installation & Usage
 
@@ -66,6 +68,7 @@ Read the value of a specific OPC UA node.
   "node_id": "ns=2;i=1"
 }
 ```
+
 ### 2. write_opcua_node
 
 Write a value to a specific OPC UA node.
@@ -163,6 +166,47 @@ Get all available variables from the OPC UA server, excluding those under the bu
 
 **Returns:**
 A comprehensive list of all variables with their properties including name, node ID, object ID, current value, data type, and description.
+
+### 8. read_history_opcua_node
+
+Read the historical values of a specific OPC UA node.
+
+**Parameters:**
+- `node_id` (string): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'
+- `start_time` (datetime)
+- `end_time` (datetime)
+- `num_values` (int): Number of values to read (default: unlimited)
+
+**Example:**
+```json
+{
+  "node_id": "ns=2;i=1",
+  "start_time": "2026-04-23 17:40:00",
+  "end_time": "2026-04-23 17:45:00"
+}
+```
+
+### 9. read_aggregate_opcua_node
+
+Calculate the historical aggregates over a defined time range, divided into smaller chunks defined by the `processing_interval` (in milliseconds). The server divides the [`start_time`, `end_time`] domain into these intervals, returning one aggregated value per interval.
+
+**Parameters:**
+- `node_id` (string): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'
+- `start_time` (datetime): Beginning of the retrieval
+- `end_time` (datetime): End of the retrieval (defaults to 'now')
+- `aggregate_function` (string): The specific formula, e.g. Average, Minimum, Maximum
+- `processing_interval` (number): The duration (ms) for each computed value. If set to 0, the server calculates a single aggregate value for the entire range.
+
+**Example:**
+```json
+{
+  "node_id": "ns=2;i=1",
+  "start_time": "2026-04-23 17:40:00",
+  "end_time": "2026-04-23 17:45:00",
+  "aggregate_function": "Average",
+  "processing_interval": "60000"
+}
+```
 
 ## Integration with Cursor/Claude
 

@@ -1,0 +1,16 @@
+[project]
+name = "opcua-mcp-tests"
+version = "0.1.0"
+description = "End-to-end test suite for the OPC UA MCP servers (Python + npx)"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp[cli]>=1.9.1",
+    "opcua>=0.98.13",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "anyio>=4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-ra"

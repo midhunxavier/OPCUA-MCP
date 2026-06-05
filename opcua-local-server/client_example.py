@@ -6,6 +6,7 @@ This demonstrates how to connect to and interact with the server.
 
 import time
 import logging
+from datetime import datetime, timedelta
 from opcua import Client, ua
 
 
@@ -48,8 +49,14 @@ def main():
                 sensor_node = sensors.get_child([f"2:{sensor_name}"])
                 value = sensor_node.get_value()
                 print(f"  {sensor_name}: {value:.2f}")
+
+                endtime = datetime.utcnow()
+                starttime = endtime - timedelta(hours=1)
+                history_data = sensor_node.read_raw_history(starttime, endtime, 5)
+                for history_data_value in history_data:
+                        print(f"  {sensor_name}: {history_data_value.Value.Value:.2f} @ {history_data_value.SourceTimestamp}")
             except Exception as e:
-                print(f"  Error reading {sensor_name}: {e}")
+                print(f"  ⚠️ Error reading {sensor_name}: {e}")
         
         # === CONTROLLING ACTUATORS ===
         print("\n⚙️ Controlling Actuators:")
@@ -99,7 +106,7 @@ def main():
             start_cmd_node.set_value(25.0)
             print(f"  Start production command sent: 25.0")
         except Exception as e:
-            print(f"  Error sending start production command: {e}")
+            print(f"  ⚠️ Error sending start production command: {e}")
         
         # Wait a moment for changes to take effect
         time.sleep(3)
@@ -119,7 +126,7 @@ def main():
                 value = sensor_node.get_value()
                 print(f"  {sensor_name}: {value:.2f}")
             except Exception as e:
-                print(f"  Error reading {sensor_name}: {e}")
+                print(f"  ⚠️ Error reading {sensor_name}: {e}")
         
         # Check pump status
         pump_node = actuators.get_child(["2:PumpEnabled"])
@@ -134,7 +141,7 @@ def main():
             stop_cmd_node.set_value(True)
             print(f"  Stop production command sent")
         except Exception as e:
-            print(f"  Error sending stop production command: {e}")
+            print(f"  ⚠️ Error sending stop production command: {e}")
         
         # Final status check
         time.sleep(2)
@@ -161,7 +168,7 @@ def main():
             print(f"  System Mode: {mode}")
             
         except Exception as e:
-            print(f"  Error testing emergency stop: {e}")
+            print(f"  ⚠️ Error testing emergency stop: {e}")
         
         # Reset system
         print("\n🔄 Resetting System:")
@@ -177,7 +184,7 @@ def main():
             print(f"  System Mode: {mode}")
             
         except Exception as e:
-            print(f"  Error resetting system: {e}")
+            print(f"  ⚠️ Error resetting system: {e}")
         
         print("\n✅ Demo completed successfully!")
         

@@ -7,7 +7,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { 
+import {
   OPCUAClient,
   MessageSecurityMode,
   SecurityPolicy,
@@ -19,22 +19,41 @@ import {
   StatusCodes,
   CallMethodResult,
   BrowseResult,
-  ReferenceDescription
+  ReferenceDescription,
+  HistoryData,
+  AggregateFunction,
 } from "node-opcua";
+
+// Keep stdout pristine for the MCP stdio JSON-RPC transport: route any stray
+// library logging (e.g. node-opcua PKI/certificate messages) to stderr.
+console.log = (...args: any[]) => console.error(...args);
 
 // OPC UA client configuration
 const SERVER_URL = process.env.OPCUA_SERVER_URL || "opc.tcp://localhost:4840";
+
+// Parse an optional ISO-8601 date/time string into a Date. MCP delivers these as
+// strings, so they must be converted before being handed to node-opcua.
+function toDate(value: string | Date | undefined): Date | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (value instanceof Date) return value;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) {
+    throw new Error(`Invalid date/time: "${value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z`);
+  }
+  return d;
+}
 
 class OPCUAMCPServer {
   private server: Server;
   private opcuaClient: OPCUAClient | null = null;
   private session: ClientSession | null = null;
+  private aggregateFunctions: string[] = [];
 
   constructor() {
     this.server = new Server(
       {
         name: "opcua-mcp-npx-server",
-        version: "0.1.0",
+        version: "0.1.2",
       },
       {
         capabilities: {
@@ -112,135 +131,241 @@ class OPCUAMCPServer {
     }
   }
 
-  private setupToolHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          {
-            name: "read_opcua_node",
-            description: "Read the value of a specific OPC UA node",
-            inputSchema: {
-              type: "object",
-              properties: {
-                node_id: {
-                  type: "string",
-                  description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
-                }
-              },
-              required: ["node_id"]
-            }
-          },
-          {
-            name: "write_opcua_node",
-            description: "Write a value to a specific OPC UA node",
-            inputSchema: {
-              type: "object",
-              properties: {
-                node_id: {
-                  type: "string",
-                  description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=3'."
-                },
-                value: {
-                  type: "string",
-                  description: "The value to write to the node. Will be converted based on node type."
-                }
-              },
-              required: ["node_id", "value"]
-            }
-          },
-          {
-            name: "browse_opcua_node_children",
-            description: "Browse the children of a specific OPC UA node",
-            inputSchema: {
-              type: "object",
-              properties: {
-                node_id: {
-                  type: "string",
-                  description: "The OPC UA node ID to browse (e.g., 'ns=0;i=85' for Objects folder)."
-                }
-              },
-              required: ["node_id"]
-            }
-          },
-          {
-            name: "read_multiple_opcua_nodes",
-            description: "Read the values of multiple OPC UA nodes in a single request",
-            inputSchema: {
-              type: "object",
-              properties: {
-                node_ids: {
-                  type: "array",
-                  items: {
-                    type: "string"
-                  },
-                  description: "A list of OPC UA node IDs to read (e.g., ['ns=2;i=2', 'ns=2;i=3'])."
-                }
-              },
-              required: ["node_ids"]
-            }
-          },
-          {
-            name: "write_multiple_opcua_nodes",
-            description: "Write values to multiple OPC UA nodes in a single request",
-            inputSchema: {
-              type: "object",
-              properties: {
-                nodes_to_write: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      node_id: {
-                        type: "string"
-                      },
-                      value: {
-                        type: "string"
-                      }
-                    },
-                    required: ["node_id", "value"]
-                  },
-                  description: "A list of objects containing 'node_id' and 'value'. Example: [{'node_id': 'ns=2;i=2', 'value': '10.5'}, {'node_id': 'ns=2;i=3', 'value': 'active'}]"
-                }
-              },
-              required: ["nodes_to_write"]
-            }
-          },
-          {
-            name: "call_opcua_method",
-            description: "Call a method on a specific OPC UA object node",
-            inputSchema: {
-              type: "object",
-              properties: {
-                object_node_id: {
-                  type: "string",
-                  description: "The OPC UA node ID of the object that contains the method. Example: 'ns=2;i=1' for the Methods folder."
-                },
-                method_node_id: {
-                  type: "string",
-                  description: "The OPC UA node ID of the method to call. Example: 'ns=2;i=2' for StartProduction method."
-                },
-                arguments: {
-                  type: "array",
-                  items: {
-                    type: "string"
-                  },
-                  description: "List of arguments to pass to the method. Arguments will be converted to appropriate OPC UA variants."
-                }
-              },
-              required: ["object_node_id", "method_node_id"]
-            }
-          },
-          {
-            name: "get_all_variables",
-            description: "Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              required: []
+  private async accessHistoryDataCapability(): Promise<boolean> {
+    await this.ensureConnection();
+    const dataValue = await this.session!.readVariableValue("ns=0;i=11193"); // AccessHistoryDataCapability
+    return (
+      dataValue.statusCode === StatusCodes.Good &&
+      dataValue.value?.value === true
+    );
+  }
+
+  private async serverCapabilitiesAggregateFunctions(): Promise<string[]> {
+    await this.ensureConnection();
+    let aggregateFunctions: string[] = [];
+    try {
+      const browseResult = await this.session!.browse({
+        nodeId: "ns=0;i=2997", // AggregateFunctions
+        browseDirection: 0, // Forward
+        resultMask: 63, // All information (including BrowseName)
+      });
+      if (
+        browseResult.statusCode === StatusCodes.Good &&
+        browseResult.references
+      ) {
+        for (const reference of browseResult.references) {
+          // Map the string BrowseName to the AggregateFunction
+          if (reference.browseName.name) {
+            const name = reference.browseName.name.toString();
+            if (name in AggregateFunction) {
+              aggregateFunctions.push(name);
             }
           }
-        ] satisfies Tool[]
-      };
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Error during serverCapabilitiesAggregateFunctions:",
+        error,
+      );
+    }
+    return aggregateFunctions;
+  }
+
+  private setupToolHandlers() {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      let tools = [
+        {
+          name: "read_opcua_node",
+          description: "Read the value of a specific OPC UA node",
+          inputSchema: {
+            type: "object",
+            properties: {
+              node_id: {
+                type: "string",
+                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
+              }
+            },
+            required: ["node_id"]
+          }
+        },
+        {
+          name: "write_opcua_node",
+          description: "Write a value to a specific OPC UA node",
+          inputSchema: {
+            type: "object",
+            properties: {
+              node_id: {
+                type: "string",
+                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=3'."
+              },
+              value: {
+                type: "string",
+                description: "The value to write to the node. Will be converted based on node type."
+              }
+            },
+            required: ["node_id", "value"]
+          }
+        },
+        {
+          name: "browse_opcua_node_children",
+          description: "Browse the children of a specific OPC UA node",
+          inputSchema: {
+            type: "object",
+            properties: {
+              node_id: {
+                type: "string",
+                description: "The OPC UA node ID to browse (e.g., 'ns=0;i=85' for Objects folder)."
+              }
+            },
+            required: ["node_id"]
+          }
+        },
+        {
+          name: "read_multiple_opcua_nodes",
+          description: "Read the values of multiple OPC UA nodes in a single request",
+          inputSchema: {
+            type: "object",
+            properties: {
+              node_ids: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "A list of OPC UA node IDs to read (e.g., ['ns=2;i=2', 'ns=2;i=3'])."
+              }
+            },
+            required: ["node_ids"]
+          }
+        },
+        {
+          name: "write_multiple_opcua_nodes",
+          description: "Write values to multiple OPC UA nodes in a single request",
+          inputSchema: {
+            type: "object",
+            properties: {
+              nodes_to_write: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    node_id: {
+                      type: "string"
+                    },
+                    value: {
+                      type: "string"
+                    }
+                  },
+                  required: ["node_id", "value"]
+                },
+                description: "A list of objects containing 'node_id' and 'value'. Example: [{'node_id': 'ns=2;i=2', 'value': '10.5'}, {'node_id': 'ns=2;i=3', 'value': 'active'}]"
+              }
+            },
+            required: ["nodes_to_write"]
+          }
+        },
+        {
+          name: "call_opcua_method",
+          description: "Call a method on a specific OPC UA object node",
+          inputSchema: {
+            type: "object",
+            properties: {
+              object_node_id: {
+                type: "string",
+                description: "The OPC UA node ID of the object that contains the method. Example: 'ns=2;i=1' for the Methods folder."
+              },
+              method_node_id: {
+                type: "string",
+                description: "The OPC UA node ID of the method to call. Example: 'ns=2;i=2' for StartProduction method."
+              },
+              arguments: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "List of arguments to pass to the method. Arguments will be converted to appropriate OPC UA variants."
+              }
+            },
+            required: ["object_node_id", "method_node_id"]
+          }
+        },
+        {
+          name: "get_all_variables",
+          description: "Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object",
+          inputSchema: {
+            type: "object",
+            properties: {},
+            required: []
+          }
+        }
+      ] satisfies Tool[];
+
+      if (await this.accessHistoryDataCapability()) {
+        const t = {
+          name: "read_history_opcua_node",
+          description: "Read the historical values of a specific OPC UA node",
+          inputSchema: {
+            type: "object",
+            properties: {
+              node_id: {
+                type: "string",
+                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
+              },
+              start_time: {
+                type: "string",
+                description: "Beginning of the retrieval"
+              },
+              end_time: {
+                type: "string",
+                description: "End of the retrieval"
+              },
+              num_values: {
+                type: "number",
+                description: "Number of values to read (default: unlimited)"
+              },
+            },
+            required: ["node_id"]
+          }
+        } satisfies Tool;
+        tools.push(t);
+      }
+
+      this.aggregateFunctions = await this.serverCapabilitiesAggregateFunctions();
+      if (this.aggregateFunctions.length > 0) {
+        const t = {
+          name: "read_aggregate_opcua_node",
+          description: "Calculate the historical aggregates over a defined time range, divided into smaller chunks defined by the `processing_interval` (in milliseconds). The server divides the [`start_time`, `end_time`] domain into these intervals, returning one aggregated value per interval",
+          inputSchema: {
+            type: "object",
+            properties: {
+              node_id: {
+                type: "string",
+                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
+              },
+              start_time: {
+                type: "string",
+                description: "Beginning of the retrieval"
+              },
+              end_time: {
+                type: "string",
+                description: "End of the retrieval (defaults to 'now')"
+              },
+              aggregate_function: {
+                type: "string",
+                description: "The specific formula, one of: " + [...this.aggregateFunctions].join(", ")
+              },
+              processing_interval: {
+                type: "number",
+                description: "The duration (ms) for each computed value. If set to 0, the server calculates a single aggregate value for the entire range."
+              }
+            },
+            required: ["node_id", "start_time", "aggregate_function"]
+          }
+        } satisfies Tool;
+        tools.push(t);
+      }
+
+      return { tools };
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -252,6 +377,23 @@ class OPCUAMCPServer {
         switch (name) {
           case "read_opcua_node":
             return await this.readOpcuaNode(args?.node_id as string);
+
+          case "read_history_opcua_node":
+            return await this.readHistoryOpcuaNode(
+              args?.node_id as string,
+              args?.start_time as string | undefined,
+              args?.end_time as string | undefined,
+              (args?.num_values as number) || 0,
+            );
+
+          case "read_aggregate_opcua_node":
+            return await this.readAggregateOpcuaNode(
+              args?.node_id as string,
+              args?.start_time as string,
+              args?.end_time as string | undefined,
+              args?.aggregate_function as string,
+              (args?.processing_interval as number) || 0,
+            );
 
           case "write_opcua_node":
             return await this.writeOpcuaNode(args?.node_id as string, args?.value as string);
@@ -298,7 +440,7 @@ class OPCUAMCPServer {
 
     try {
       const dataValue = await this.session.readVariableValue(nodeId);
-      
+
       if (dataValue.statusCode !== StatusCodes.Good) {
         throw new Error(`Read failed with status: ${dataValue.statusCode.toString()}`);
       }
@@ -317,6 +459,86 @@ class OPCUAMCPServer {
     }
   }
 
+  private async readHistoryOpcuaNode(
+    nodeId: string,
+    start: string | undefined,
+    end: string | undefined,
+    numValuesPerNode: number,
+  ) {
+    if (!this.session) {
+      throw new Error("No OPC UA session available");
+    }
+
+    try {
+      const historyValues = await this.session.readHistoryValue(
+        [nodeId],
+        toDate(start) as any,
+        toDate(end) as any,
+        {
+          numValuesPerNode,
+        },
+      );
+      if (historyValues.length !== 1) {
+        throw new Error(`Read history failed`);
+      }
+      if (historyValues[0].statusCode !== StatusCodes.Good) {
+        throw new Error(`Read history failed with status: ${historyValues[0].statusCode.toString()}`);
+      }
+      const dataValues = (historyValues[0].historyData as HistoryData).dataValues;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${JSON.stringify(dataValues, null, 2)}`
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async readAggregateOpcuaNode(
+    nodeId: string,
+    start: string,
+    end: string | undefined,
+    aggregate_fn: string,
+    processing_interval: number,
+  ) {
+    if (!this.session) {
+      throw new Error("No OPC UA session available");
+    }
+
+    if (!this.aggregateFunctions.includes(aggregate_fn)) {
+      throw new Error("Invalid aggregate function");
+    }
+
+    try {
+      const aggregateFn = AggregateFunction[aggregate_fn as keyof typeof AggregateFunction];
+      const historyValues = await this.session.readAggregateValue(
+        { nodeId },
+        toDate(start) as any,
+        (toDate(end) ?? new Date()) as any,
+        aggregateFn,
+        processing_interval,
+      );
+      if (historyValues.statusCode !== StatusCodes.Good) {
+        throw new Error(`Read aggregate failed with status: ${historyValues.statusCode.toString()}`);
+      }
+      const dataValues = (historyValues.historyData as HistoryData).dataValues;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${JSON.stringify(dataValues, null, 2)}`
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   private async writeOpcuaNode(nodeId: string, value: string) {
     if (!this.session) {
       throw new Error("No OPC UA session available");
@@ -325,7 +547,7 @@ class OPCUAMCPServer {
     try {
       // First read the current value to determine the data type
       const currentDataValue = await this.session.readVariableValue(nodeId);
-      
+
       let convertedValue: any;
       const currentValue = currentDataValue.value?.value;
       // Coerce to string first: a client may send a non-string (e.g. boolean/number) value.
@@ -352,7 +574,7 @@ class OPCUAMCPServer {
       };
 
       const statusCode = await this.session.write(nodeToWrite);
-      
+
       if (statusCode !== StatusCodes.Good) {
         throw new Error(`Write failed with status: ${statusCode.toString()}`);
       }
@@ -377,7 +599,7 @@ class OPCUAMCPServer {
 
     try {
       const browseResult = await this.session.browse(nodeId);
-      
+
       if (browseResult.statusCode !== StatusCodes.Good) {
         throw new Error(`Browse failed with status: ${browseResult.statusCode.toString()}`);
       }
@@ -412,9 +634,9 @@ class OPCUAMCPServer {
       }));
 
       const dataValues = await this.session.read(nodesToRead);
-      
+
       const results: { [key: string]: any } = {};
-      
+
       dataValues.forEach((dataValue, index) => {
         const nodeId = nodeIds[index];
         if (dataValue.statusCode === StatusCodes.Good) {
@@ -451,11 +673,11 @@ class OPCUAMCPServer {
       }));
 
       const currentDataValues = await this.session.read(nodesToRead);
-      
+
       const writeNodes = nodesToWrite.map((item, index) => {
         const currentDataValue = currentDataValues[index];
         const currentValue = currentDataValue.value?.value;
-        
+
         let convertedValue: any;
         // Coerce to string first: a client may send a non-string (e.g. boolean/number) value.
         const valueStr = String(item.value);
@@ -476,16 +698,16 @@ class OPCUAMCPServer {
           nodeId: item.node_id,
           attributeId: AttributeIds.Value,
           value: new DataValue({
-            value: new Variant({ 
-              dataType: currentDataValue.value?.dataType || DataType.String, 
-              value: convertedValue 
+            value: new Variant({
+              dataType: currentDataValue.value?.dataType || DataType.String,
+              value: convertedValue
             })
           })
         };
       });
 
       const statusCodes = await this.session.write(writeNodes);
-      
+
       const results = statusCodes.map((statusCode, index) => ({
         node_id: nodesToWrite[index].node_id,
         status: statusCode === StatusCodes.Good ? 'Success' : `Error: ${statusCode.toString()}`
@@ -512,12 +734,12 @@ class OPCUAMCPServer {
     try {
       // Convert string arguments to appropriate types
       const convertedArgs: Variant[] = [];
-      
+
       if (methodArgs) {
         for (const arg of methodArgs) {
           // Try to convert to appropriate type
           let convertedValue: any;
-          
+
           // Try float first
           const floatValue = parseFloat(arg);
           if (!isNaN(floatValue)) {
@@ -532,10 +754,10 @@ class OPCUAMCPServer {
               convertedValue = arg;
             }
           }
-          
-          convertedArgs.push(new Variant({ 
+
+          convertedArgs.push(new Variant({
             dataType: typeof convertedValue === 'number' ? DataType.Double : DataType.String,
-            value: convertedValue 
+            value: convertedValue
           }));
         }
       }
@@ -547,7 +769,7 @@ class OPCUAMCPServer {
       };
 
       const callResult: CallMethodResult = await this.session.call(methodToCall);
-      
+
       if (callResult.statusCode !== StatusCodes.Good) {
         throw new Error(`Method call failed with status: ${callResult.statusCode.toString()}`);
       }
@@ -582,11 +804,11 @@ class OPCUAMCPServer {
 
       // Start browsing from the Objects folder (ns=0;i=85)
       const objectsNodeId = "ns=0;i=85";
-      
+
       const searchVariables = async (nodeId: string): Promise<void> => {
         try {
           const browseResult = await this.session!.browse(nodeId);
-          
+
           if (browseResult.statusCode !== StatusCodes.Good || !browseResult.references) {
             return;
           }
@@ -595,7 +817,7 @@ class OPCUAMCPServer {
             try {
               const childNodeId = ref.nodeId.toString();
               const browseName = ref.browseName.name;
-              
+
               // Skip the entire "Server" subtree
               if (browseName === "Server") {
                 continue;
@@ -608,7 +830,7 @@ class OPCUAMCPServer {
               });
 
               const nodeClass = nodeClassResults.value?.value;
-              
+
               if (nodeClass === 2) { // NodeClass.Variable = 2
                 // This is a variable node
                 let value: any;
@@ -678,7 +900,7 @@ class OPCUAMCPServer {
           result += `  Data Type: ${variable.data_type}\n`;
           result += `  Description: ${variable.description}\n`;
         }
-        
+
         return {
           content: [
             {
@@ -711,4 +933,4 @@ class OPCUAMCPServer {
 
 // Run the server
 const server = new OPCUAMCPServer();
-server.run().catch(console.error); 
+server.run().catch(console.error);

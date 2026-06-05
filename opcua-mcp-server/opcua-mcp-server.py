@@ -6,6 +6,7 @@ import asyncio
 import os
 import sys
 from typing import List, Dict, Any
+from datetime import datetime
 from opcua import ua
 from opcua.ua import NodeClass
 
@@ -47,6 +48,64 @@ def read_opcua_node(node_id: str, ctx: Context) -> str:
     node = client.get_node(node_id)
     value = node.get_value()  # Synchronous call to get node value
     return f"Node {node_id} value: {value}"
+
+# Tool: Read historical values of an OPC UA node.
+# Registered only when the server supports historical data access (see below),
+# mirroring the npx server's capability gating.
+def read_history_opcua_node(node_id: str,
+                            ctx: Context,
+                            start_time: datetime | None = None,
+                            end_time: datetime | None = None,
+                            num_values: int = 0) -> list[dict]:
+    """
+    Read the historical values of a specific OPC UA node.
+
+    Parameters:
+        node_id (str): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'.
+                       Example: 'ns=2;i=2'.
+        start_time (datetime): Start time (ISO 8601).
+                               Example: '2026-04-22T18:50:00'
+        end_time (datetime): End time (ISO 8601).
+                             Example: '2026-04-22T18:51:00'
+        num_values (int): Number of values to read (default: unlimited)
+
+    Returns:
+        list[dict]: An array of values `{ "value": <value>, "timestamp": <timestamp>, "status": "Good" }`
+    """
+    client = ctx.request_context.lifespan_context["opcua_client"]
+    node = client.get_node(node_id)
+    values = node.read_raw_history(starttime=start_time, endtime=end_time, numvalues=num_values)
+    return [
+        {
+            "value": str(v.Value.Value),
+            "timestamp": str(v.SourceTimestamp),
+            "status": str(v.StatusCode.name)
+        }
+        for v in values
+    ]
+
+
+def _server_supports_history(url: str) -> bool:
+    """Probe the server's AccessHistoryDataCapability (ns=0;i=11193).
+
+    Used to expose `read_history_opcua_node` only when the server actually
+    supports historical reads, matching the npx server's behaviour.
+    """
+    try:
+        probe = Client(url)
+        probe.connect()
+        try:
+            return bool(probe.get_node("ns=0;i=11193").get_value())
+        finally:
+            probe.disconnect()
+    except Exception:
+        return False
+
+
+# Conditionally register the history tool based on server capability.
+if _server_supports_history(server_url):
+    read_history_opcua_node = mcp.tool()(read_history_opcua_node)
+
 
 # Tool: Write a value to an OPC UA node
 @mcp.tool()

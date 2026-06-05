@@ -16,6 +16,7 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 ### Core Tools
 
 - **`read_opcua_node`** - Read the current value of any OPC UA node
+- **`read_history_opcua_node`** - Read the historical values of a specific OPC UA node (only exposed if the server supports historical data access)
 - **`write_opcua_node`** - Write values to OPC UA nodes with automatic type conversion
 - **`browse_opcua_node_children`** - Explore the OPC UA address space and discover available nodes
 - **`call_opcua_method`** - Execute OPC UA methods on server objects
@@ -165,6 +166,12 @@ Result: Found 5 variables:
 ```python
 read_opcua_node(node_id="ns=2;i=3")
 # Returns: "Node ns=2;i=3 value: 26.57"
+```
+
+**Read historical values from a single node:**
+```python
+read_history_opcua_node(node_id="ns=2;i=3", num_values=1)
+# Returns: [ { "value": "26.57", "timestamp": "2026-04-22 18:51:05.163834", "status": "Good" }]
 ```
 
 **Read multiple nodes:**

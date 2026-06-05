@@ -251,7 +251,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/77/b1/5788cf02d4527ec81
 
 [[package]]
 name = "opcua-mcp-server"
-version = "0.1.0"
+version = "0.1.2"
 source = { virtual = "." }
 dependencies = [
     { name = "cryptography" },

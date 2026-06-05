@@ -24,8 +24,17 @@
     "scada",
     "npx"
   ],
-  "author": "Your Name",
+  "author": "Midhun Xavier",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/midhunxavier/OPCUA-MCP.git",
+    "directory": "opcua-mcp-npx-server"
+  },
+  "homepage": "https://github.com/midhunxavier/OPCUA-MCP#readme",
+  "bugs": {
+    "url": "https://github.com/midhunxavier/OPCUA-MCP/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "node-opcua": "^2.128.0",

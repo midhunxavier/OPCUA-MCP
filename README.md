@@ -125,7 +125,7 @@ Result: "Found 15 variables:
 - **Framework**: FastMCP
 - **OPC UA Library**: `opcua` (FreeOpcUa)
 - **Transport**: STDIO
-- **Entry Point**: `opcua-mcp-server.py`
+- **Entry Point**: `opcua_mcp_server.py` (console script: `opcua-mcp-server`)
 
 ### NPX Version (`opcua-mcp-npx-server`)
 - **Language**: TypeScript/Node.js
@@ -192,14 +192,11 @@ Result: "Found 15 variables:
 
 ### Python Version
 ```bash
-# Installation
-cd packages/server-python
-uv install  # or pip install
+# Install the Python workspace (from the repo root)
+uv sync --all-packages
 
-# Usage
-uv run opcua-mcp-server.py
-# or
-python opcua-mcp-server.py
+# Run the Python server
+uv run --no-sync opcua-mcp-server
 ```
 
 ### NPX Version
@@ -234,7 +231,7 @@ Both versions use the same environment variable:
         "--directory",
         "/path/to/packages/server-python",
         "run",
-        "opcua-mcp-server.py"
+        "opcua-mcp-server"
       ],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
@@ -281,7 +278,8 @@ Inspector (UI or CLI), and an AI agent (Claude Code / Desktop / Cursor). Start t
 mock server first, then:
 
 ```bash
-cd tests && uv run pytest -v        # end-to-end suite, both servers
+uv sync --all-packages              # one-time, from the repo root
+cd tests && uv run --no-sync pytest -v    # end-to-end suite, both servers
 ```
 
 See **[docs/testing.md](docs/testing.md)** for the full guide (Inspector walkthrough, AI-agent

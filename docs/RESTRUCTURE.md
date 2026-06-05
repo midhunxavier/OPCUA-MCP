@@ -64,7 +64,7 @@ What stays duplicated (accepted): ~10 lines of per-tool logic per language.
 |---|-------|--------|
 | 0 | Baseline & branch | ✅ done |
 | 1 | Folder reorg, behavior-neutral | ✅ done |
-| 2 | Python: uv workspace + real package | ⬜ todo |
+| 2 | Python: uv workspace + real package | ✅ done |
 | 3 | npm rename across all leak points | ⬜ todo |
 | 4 | Shared contract + parity test | ⬜ todo |
 | 5 | Docs consolidation | ⬜ todo |
@@ -101,7 +101,7 @@ package-specific content; single tool reference in `docs/examples.md`; rewrite t
 CONTRIBUTING "add a tool" flow to go through `contract/tools.json`.
 
 ### Phase 6 — Final validation & PR
-Full green (`uv run pytest`, `npm run build`, parity + sync jobs); update CHANGELOG;
+Full green (`uv run --no-sync pytest`, `npm run build`, parity + sync jobs); update CHANGELOG;
 open PR.
 
 ## Out of scope

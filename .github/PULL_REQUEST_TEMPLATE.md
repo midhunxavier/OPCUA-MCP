@@ -18,8 +18,8 @@
 ## Checklist
 
 - [ ] If I added or changed a tool, I updated **both** servers (or explained why not).
-- [ ] I updated the README / EXAMPLES / TESTING docs where relevant.
-- [ ] I ran the end-to-end suite locally (`cd tests && uv run pytest -v`).
+- [ ] I updated the README / docs (examples, testing) where relevant.
+- [ ] I ran the end-to-end suite locally (`uv sync --all-packages`, then `cd tests && uv run --no-sync pytest -v`).
 - [ ] I added or updated tests covering the change.
 - [ ] I updated `CHANGELOG.md` under **Unreleased**.
 

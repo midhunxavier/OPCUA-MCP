@@ -61,11 +61,7 @@ A comprehensive mockup OPC UA server for industrial control systems, featuring r
 
 ### Starting the Server
 ```bash
-# Using Python directly
-python main.py
-
-# Or using uv
-uv run main.py
+uv run opcua-mock-server
 ```
 
 The server will start on `opc.tcp://0.0.0.0:4840/freeopcua/server/`

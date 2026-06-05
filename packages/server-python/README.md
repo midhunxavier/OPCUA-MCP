@@ -68,12 +68,12 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 
 **With UV:**
 ```bash
-uv run opcua-mcp-server.py
+uv run opcua-mcp-server
 ```
 
 **With Python:**
 ```bash
-python opcua-mcp-server.py
+python opcua_mcp_server.py
 ```
 
 ### Integration with MCP Clients
@@ -89,7 +89,7 @@ Add to your MCP client configuration (e.g., `config.json`):
         "--directory",
         "/path/to/packages/server-python",
         "run",
-        "opcua-mcp-server.py"
+        "opcua-mcp-server"
       ],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"

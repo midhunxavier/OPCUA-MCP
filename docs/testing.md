@@ -10,7 +10,8 @@ Three ways to test, from fully automated to fully interactive:
 > device the MCP servers talk to.
 >
 > ```bash
-> cd packages/mock-server && uv run main.py
+> uv sync --all-packages            # one-time, from the repo root
+> uv run --no-sync opcua-mock-server
 > # opc.tcp://localhost:4840/freeopcua/server/  (history enabled on all variables)
 > ```
 >
@@ -29,10 +30,11 @@ Drives **both** servers over stdio with the official `mcp` client SDK and assert
 on real responses. 22 tests (11 cases × Python + npx).
 
 ```bash
+uv sync --all-packages         # one-time, from the repo root
 cd tests
-uv run pytest -v
-uv run pytest -v -k python     # only the Python server
-uv run pytest -v -k npx        # only the npx server
+uv run --no-sync pytest -v
+uv run --no-sync pytest -v -k python     # only the Python server
+uv run --no-sync pytest -v -k npx        # only the npx server
 ```
 
 The suite reuses a mock server already on `:4840`, or starts its own. See
@@ -53,8 +55,8 @@ OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
   npx @modelcontextprotocol/inspector node packages/server-node/build/index.js
 
 # Python server
-cd packages/server-python && OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
-  npx @modelcontextprotocol/inspector uv run opcua-mcp-server.py
+OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
+  npx @modelcontextprotocol/inspector uv --directory packages/server-python run opcua-mcp-server
 ```
 
 It prints a `http://localhost:6274/?...` URL. In the browser:
@@ -97,7 +99,7 @@ $BIN --method tools/call --tool-name call_opcua_method \
 ```
 
 For the Python server, swap the command for
-`uv run opcua-mcp-server.py` (run from `packages/server-python/`).
+`uv --directory packages/server-python run opcua-mcp-server`.
 
 ---
 
@@ -113,7 +115,7 @@ Register both servers at **project scope** (writes `.mcp.json` in the repo root)
 ROOT=$(pwd)
 URL=opc.tcp://localhost:4840/freeopcua/server/
 claude mcp add opcua-python -s project -e OPCUA_SERVER_URL=$URL \
-  -- uv --directory "$ROOT/packages/server-python" run opcua-mcp-server.py
+  -- uv --directory "$ROOT/packages/server-python" run opcua-mcp-server
 claude mcp add opcua-npx -s project -e OPCUA_SERVER_URL=$URL \
   -- node "$ROOT/packages/server-node/build/index.js"
 ```
@@ -162,7 +164,7 @@ ask Cursor's assistant the prompts above.
 
 | Symptom | Cause / fix |
 |---------|-------------|
-| **List Tools is empty or errors** | Mock server not running → `cd packages/mock-server && uv run main.py` |
+| **List Tools is empty or errors** | Mock server not running → `uv run --no-sync opcua-mock-server` |
 | **`read_history_opcua_node` not listed** | Connected to a server without history, or wrong `OPCUA_SERVER_URL` |
 | **`read_aggregate_opcua_node` not listed** | Expected — the bundled mock advertises no aggregate functions, so the tool is correctly hidden |
 | **`Address already in use` on :4840** | A mock server is already running; reuse it, or `lsof -tiTCP:4840 -sTCP:LISTEN \| xargs kill` |

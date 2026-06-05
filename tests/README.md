@@ -26,6 +26,7 @@ and only when the server advertises `AccessHistoryDataCapability`.
 ## Prerequisites
 
 - `uv`, `node` (>=18), `npm`
+- Set up the workspace once (from the repo root): `uv sync --all-packages`
 - Build the npx server once: `cd packages/server-node && npm install && npm run build`
   (npx tests are **skipped** if `build/index.js` is missing).
 
@@ -33,7 +34,7 @@ and only when the server advertises `AccessHistoryDataCapability`.
 
 ```bash
 cd tests
-uv run pytest -v
+uv run --no-sync pytest -v
 ```
 
 The suite reuses a mock OPC UA server already listening on `:4840`; if none is
@@ -41,14 +42,14 @@ running it starts one for the session (and waits a few seconds for history to
 accumulate). To force a specific endpoint:
 
 ```bash
-OPCUA_SERVER_URL="opc.tcp://localhost:4840/freeopcua/server/" uv run pytest -v
+OPCUA_SERVER_URL="opc.tcp://localhost:4840/freeopcua/server/" uv run --no-sync pytest -v
 ```
 
 Select a single implementation:
 
 ```bash
-uv run pytest -v -k python
-uv run pytest -v -k npx
+uv run --no-sync pytest -v -k python
+uv run --no-sync pytest -v -k npx
 ```
 
 ## Notes

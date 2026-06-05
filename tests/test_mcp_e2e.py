@@ -67,7 +67,7 @@ def _server_params(impl: str, url: str) -> StdioServerParameters:
     if impl == "python":
         return StdioServerParameters(
             command="uv",
-            args=["--directory", str(ROOT / "packages" / "server-python"), "run", "opcua-mcp-server.py"],
+            args=["--directory", str(ROOT), "run", "--no-sync", "opcua-mcp-server"],
             env=env,
         )
     if impl == "npx":

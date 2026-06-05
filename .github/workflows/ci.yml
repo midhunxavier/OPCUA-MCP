@@ -33,6 +33,9 @@ jobs:
           npm ci
           npm run build
 
+      - name: Sync workspace (all packages)
+        run: uv sync --all-packages
+
       - name: Run end-to-end tests
         working-directory: tests
-        run: uv run pytest -v
+        run: uv run --no-sync pytest -v

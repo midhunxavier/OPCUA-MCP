@@ -35,15 +35,15 @@ should be added to the other with the **same name and arguments**.
 Start the mock server first (it's the data source for everything else):
 
 ```bash
-cd packages/mock-server && uv run main.py
+uv sync --all-packages          # one-time: set up the workspace env
+uv run --no-sync opcua-mock-server
 # listens on opc.tcp://0.0.0.0:4840/freeopcua/server/  (history enabled)
 ```
 
 ### Python MCP server
 ```bash
-cd packages/server-python
-uv sync
-OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run opcua-mcp-server.py
+OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
+  uv run --no-sync opcua-mcp-server
 ```
 
 ### npx MCP server
@@ -61,7 +61,8 @@ clean — write all logs to `stderr`.
 ## Running the tests
 
 ```bash
-cd tests && uv run pytest -v        # 22 tests, both servers
+uv sync --all-packages              # one-time workspace setup
+cd tests && uv run --no-sync pytest -v   # both servers
 ```
 
 See [tests/README.md](tests/README.md) for details and selectors
@@ -72,7 +73,7 @@ agent, see **[docs/testing.md](docs/testing.md)**.
 
 Keep the two servers in sync. To add a tool `foo`:
 
-1. **Python** (`packages/server-python/opcua-mcp-server.py`): add a function decorated
+1. **Python** (`packages/server-python/opcua_mcp_server.py`): add a function decorated
    with `@mcp.tool()`, typed args, a docstring, and `ctx: Context` to reach the
    OPC UA client. Return a `str` or JSON-serialisable value.
 2. **npx** (`packages/server-node/src/index.ts`): add the tool to the
@@ -103,7 +104,7 @@ Keep the two servers in sync. To add a tool `foo`:
 ## Commit & PR conventions
 
 - Branch off `main`; keep commits focused with descriptive messages.
-- Run `cd tests && uv run pytest` before opening a PR.
+- Run the suite (`uv sync --all-packages`, then `cd tests && uv run --no-sync pytest`) before opening a PR.
 - Reference related issues/PRs (e.g. "Fixes #1").
 - If a change was AI-assisted, keep the `Co-Authored-By:` trailer.
 - PRs from forks: enable **"Allow edits by maintainers"** so reviewers can rebase.

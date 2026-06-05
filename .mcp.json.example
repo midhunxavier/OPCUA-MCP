@@ -8,7 +8,7 @@
         "--directory",
         "/ABSOLUTE/PATH/TO/OPCUA-MCP/packages/server-python",
         "run",
-        "opcua-mcp-server.py"
+        "opcua-mcp-server"
       ],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840/freeopcua/server/"

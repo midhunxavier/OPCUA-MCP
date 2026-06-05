@@ -2,6 +2,13 @@ version = 1
 revision = 2
 requires-python = ">=3.13"
 
+[manifest]
+members = [
+    "opcua-local-server",
+    "opcua-mcp-server",
+    "opcua-mcp-tests",
+]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.4"
@@ -386,9 +393,39 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/77/b1/5788cf02d4527ec816998ecd8b066242877f1b1ca6fcc07d7d4c0317fd04/opcua-0.98.13.tar.gz", hash = "sha256:3352f30b5fed863146a82778aaf09faa5feafcb9dd446a4f49ff34c0c3ebbde6", size = 572837, upload-time = "2021-03-03T10:40:31.607Z" }
 
 [[package]]
+name = "opcua-local-server"
+version = "0.1.2"
+source = { editable = "packages/mock-server" }
+dependencies = [
+    { name = "opcua" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "opcua", specifier = ">=0.98.13" }]
+
+[[package]]
+name = "opcua-mcp-server"
+version = "0.1.2"
+source = { editable = "packages/server-python" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "httpx" },
+    { name = "mcp", extra = ["cli"] },
+    { name = "opcua" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography", specifier = ">=45.0.2" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.9.1" },
+    { name = "opcua", specifier = ">=0.98.13" },
+]
+
+[[package]]
 name = "opcua-mcp-tests"
 version = "0.1.0"
-source = { virtual = "." }
+source = { virtual = "tests" }
 dependencies = [
     { name = "anyio" },
     { name = "mcp", extra = ["cli"] },

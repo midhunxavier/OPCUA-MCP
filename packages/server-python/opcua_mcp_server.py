@@ -399,6 +399,10 @@ def get_all_variables(ctx: Context) -> str:
         return f"Error while finding variables: {str(e)}"
 
 # Run the server
+def main() -> None:
+    """Entry point for the `opcua-mcp-server` console script."""
+    mcp.run(transport="stdio")
+
+
 if __name__ == "__main__":
-    # Initialize and run the server
-    mcp.run(transport='stdio') 
+    main()

@@ -7,11 +7,14 @@ Outputs below are real (abbreviated) responses captured end-to-end.
 ## Quick start
 
 ```bash
+# 0) One-time: set up the Python workspace (from the repo root)
+uv sync --all-packages
+
 # 1) Start the mock OPC UA server (the simulated PLC/sensors)
-cd packages/mock-server && uv run main.py        # listens on opc.tcp://localhost:4840/freeopcua/server/
+uv run --no-sync opcua-mock-server        # listens on opc.tcp://localhost:4840/freeopcua/server/
 
 # 2a) Python MCP server
-cd packages/server-python && OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run opcua-mcp-server.py
+OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run --no-sync opcua-mcp-server
 
 # 2b) npx MCP server
 cd packages/server-node && npm install && npm run build

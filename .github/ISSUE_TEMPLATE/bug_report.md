@@ -8,7 +8,7 @@ assignees: ""
 
 **Which implementation?**
 - [ ] Python (`opcua-mcp-server`)
-- [ ] npx / TypeScript (`opcua-mcp-npx-server`)
+- [ ] npx / TypeScript (`opcua-mcp-server`)
 
 **Describe the bug**
 A clear and concise description of what the bug is.
@@ -32,7 +32,7 @@ paste any error message or tool output here
 **Environment**
 - OS:
 - Python / Node version:
-- Package version (npm `opcua-mcp-npx-server` or commit SHA):
+- Package version (npm `opcua-mcp-server` or commit SHA):
 - OPC UA server (mock from this repo / vendor + model):
 
 **Additional context**

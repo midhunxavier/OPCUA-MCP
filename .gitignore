@@ -17,5 +17,26 @@ Desktop.ini
 # Logs
 *.log
 
-# Local Claude Code MCP config (machine-specific absolute paths)
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info/
+build/
+dist/
+wheels/
+.venv/
+.pytest_cache/
+
+# Node / TypeScript
+node_modules/
+*.tsbuildinfo
+.npm
+*.tgz
+coverage/
+.eslintcache
+.env
+.env.*
+
+# Local Claude Code config (machine-specific)
 .mcp.json
+.claude/settings.local.json

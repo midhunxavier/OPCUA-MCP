@@ -1,14 +1,15 @@
 {
-  "name": "opcua-mcp-npx-server",
+  "name": "opcua-mcp-server",
   "version": "0.1.2",
-  "description": "NPX-based MCP server for OPC UA control - Model Context Protocol server for OPC UA operations",
-  "main": "src/index.js",
+  "description": "MCP server for OPC UA control - Model Context Protocol server for OPC UA operations",
+  "main": "build/index.js",
   "type": "module",
   "bin": {
-    "opcua-mcp-npx-server": "./build/index.js"
+    "opcua-mcp-server": "./build/index.js",
+    "opcua-mcp": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-contract.mjs",
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
@@ -21,15 +22,14 @@
     "opc-ua",
     "industrial",
     "automation",
-    "scada",
-    "npx"
+    "scada"
   ],
   "author": "Midhun Xavier",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/midhunxavier/OPCUA-MCP.git",
-    "directory": "opcua-mcp-npx-server"
+    "directory": "packages/server-node"
   },
   "homepage": "https://github.com/midhunxavier/OPCUA-MCP#readme",
   "bugs": {

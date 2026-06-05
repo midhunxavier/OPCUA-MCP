@@ -23,6 +23,9 @@ import {
   HistoryData,
   AggregateFunction,
 } from "node-opcua";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 // Keep stdout pristine for the MCP stdio JSON-RPC transport: route any stray
 // library logging (e.g. node-opcua PKI/certificate messages) to stderr.
@@ -30,6 +33,17 @@ console.log = (...args: any[]) => console.error(...args);
 
 // OPC UA client configuration
 const SERVER_URL = process.env.OPCUA_SERVER_URL || "opc.tcp://localhost:4840";
+
+// Shared tool contract: single source of truth in /contract/tools.json, copied
+// to build/contract.json at build time (see scripts/copy-contract.mjs) and read
+// here at runtime. Keeps tool names/descriptions/schemas in lockstep with the
+// Python server (enforced by tests/test_contract_parity.py).
+const CONTRACT: {
+  capabilities: Record<string, { nodeId: string; browseName: string; check: string }>;
+  tools: Array<{ name: string; capability: string | null; description: string; inputSchema: any }>;
+} = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "contract.json"), "utf8")
+);
 
 // Parse an optional ISO-8601 date/time string into a Date. MCP delivers these as
 // strings, so they must be converted before being handed to node-opcua.
@@ -52,7 +66,7 @@ class OPCUAMCPServer {
   constructor() {
     this.server = new Server(
       {
-        name: "opcua-mcp-npx-server",
+        name: "opcua-mcp-server",
         version: "0.1.2",
       },
       {
@@ -136,7 +150,7 @@ class OPCUAMCPServer {
     // transient OPC UA outage should still leave the core tools advertised.
     try {
       await this.ensureConnection();
-      const dataValue = await this.session!.readVariableValue("ns=0;i=11193"); // AccessHistoryDataCapability
+      const dataValue = await this.session!.readVariableValue(CONTRACT.capabilities.history.nodeId);
       return (
         dataValue.statusCode === StatusCodes.Good &&
         dataValue.value?.value === true
@@ -154,7 +168,7 @@ class OPCUAMCPServer {
     try {
       await this.ensureConnection();
       const browseResult = await this.session!.browse({
-        nodeId: "ns=0;i=2997", // AggregateFunctions
+        nodeId: CONTRACT.capabilities.aggregate.nodeId,
         browseDirection: 0, // Forward
         resultMask: 63, // All information (including BrowseName)
       });
@@ -183,196 +197,32 @@ class OPCUAMCPServer {
 
   private setupToolHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      let tools = [
-        {
-          name: "read_opcua_node",
-          description: "Read the value of a specific OPC UA node",
-          inputSchema: {
-            type: "object",
-            properties: {
-              node_id: {
-                type: "string",
-                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
-              }
-            },
-            required: ["node_id"]
-          }
-        },
-        {
-          name: "write_opcua_node",
-          description: "Write a value to a specific OPC UA node",
-          inputSchema: {
-            type: "object",
-            properties: {
-              node_id: {
-                type: "string",
-                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=3'."
-              },
-              value: {
-                type: "string",
-                description: "The value to write to the node. Will be converted based on node type."
-              }
-            },
-            required: ["node_id", "value"]
-          }
-        },
-        {
-          name: "browse_opcua_node_children",
-          description: "Browse the children of a specific OPC UA node",
-          inputSchema: {
-            type: "object",
-            properties: {
-              node_id: {
-                type: "string",
-                description: "The OPC UA node ID to browse (e.g., 'ns=0;i=85' for Objects folder)."
-              }
-            },
-            required: ["node_id"]
-          }
-        },
-        {
-          name: "read_multiple_opcua_nodes",
-          description: "Read the values of multiple OPC UA nodes in a single request",
-          inputSchema: {
-            type: "object",
-            properties: {
-              node_ids: {
-                type: "array",
-                items: {
-                  type: "string"
-                },
-                description: "A list of OPC UA node IDs to read (e.g., ['ns=2;i=2', 'ns=2;i=3'])."
-              }
-            },
-            required: ["node_ids"]
-          }
-        },
-        {
-          name: "write_multiple_opcua_nodes",
-          description: "Write values to multiple OPC UA nodes in a single request",
-          inputSchema: {
-            type: "object",
-            properties: {
-              nodes_to_write: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    node_id: {
-                      type: "string"
-                    },
-                    value: {
-                      type: "string"
-                    }
-                  },
-                  required: ["node_id", "value"]
-                },
-                description: "A list of objects containing 'node_id' and 'value'. Example: [{'node_id': 'ns=2;i=2', 'value': '10.5'}, {'node_id': 'ns=2;i=3', 'value': 'active'}]"
-              }
-            },
-            required: ["nodes_to_write"]
-          }
-        },
-        {
-          name: "call_opcua_method",
-          description: "Call a method on a specific OPC UA object node",
-          inputSchema: {
-            type: "object",
-            properties: {
-              object_node_id: {
-                type: "string",
-                description: "The OPC UA node ID of the object that contains the method. Example: 'ns=2;i=1' for the Methods folder."
-              },
-              method_node_id: {
-                type: "string",
-                description: "The OPC UA node ID of the method to call. Example: 'ns=2;i=2' for StartProduction method."
-              },
-              arguments: {
-                type: "array",
-                items: {
-                  type: "string"
-                },
-                description: "List of arguments to pass to the method. Arguments will be converted to appropriate OPC UA variants."
-              }
-            },
-            required: ["object_node_id", "method_node_id"]
-          }
-        },
-        {
-          name: "get_all_variables",
-          description: "Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object",
-          inputSchema: {
-            type: "object",
-            properties: {},
-            required: []
-          }
-        }
-      ] satisfies Tool[];
-
-      if (await this.accessHistoryDataCapability()) {
-        const t = {
-          name: "read_history_opcua_node",
-          description: "Read the historical values of a specific OPC UA node",
-          inputSchema: {
-            type: "object",
-            properties: {
-              node_id: {
-                type: "string",
-                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
-              },
-              start_time: {
-                type: "string",
-                description: "Beginning of the retrieval"
-              },
-              end_time: {
-                type: "string",
-                description: "End of the retrieval"
-              },
-              num_values: {
-                type: "number",
-                description: "Number of values to read (default: unlimited)"
-              },
-            },
-            required: ["node_id"]
-          }
-        } satisfies Tool;
-        tools.push(t);
-      }
-
+      // Build the advertised tools from the shared contract, gated by the
+      // server's runtime capabilities (history / aggregate).
+      const historyOk = await this.accessHistoryDataCapability();
       this.aggregateFunctions = await this.serverCapabilitiesAggregateFunctions();
-      if (this.aggregateFunctions.length > 0) {
-        const t = {
-          name: "read_aggregate_opcua_node",
-          description: "Calculate the historical aggregates over a defined time range, divided into smaller chunks defined by the `processing_interval` (in milliseconds). The server divides the [`start_time`, `end_time`] domain into these intervals, returning one aggregated value per interval",
-          inputSchema: {
-            type: "object",
-            properties: {
-              node_id: {
-                type: "string",
-                description: "The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'. Example: 'ns=2;i=2'."
-              },
-              start_time: {
-                type: "string",
-                description: "Beginning of the retrieval"
-              },
-              end_time: {
-                type: "string",
-                description: "End of the retrieval (defaults to 'now')"
-              },
-              aggregate_function: {
-                type: "string",
-                description: "The specific formula, one of: " + [...this.aggregateFunctions].join(", ")
-              },
-              processing_interval: {
-                type: "number",
-                description: "The duration (ms) for each computed value. If set to 0, the server calculates a single aggregate value for the entire range."
-              }
-            },
-            required: ["node_id", "start_time", "aggregate_function"]
+      const aggregateOk = this.aggregateFunctions.length > 0;
+
+      const tools = CONTRACT.tools
+        .filter(
+          (t) =>
+            t.capability === null ||
+            (t.capability === "history" && historyOk) ||
+            (t.capability === "aggregate" && aggregateOk)
+        )
+        .map((t) => {
+          // Preserve the dynamic aggregate_function help text (lists the
+          // aggregate functions the server actually advertises).
+          if (t.name === "read_aggregate_opcua_node") {
+            const inputSchema = JSON.parse(JSON.stringify(t.inputSchema));
+            inputSchema.properties.aggregate_function.description =
+              t.inputSchema.properties.aggregate_function.description +
+              ", one of: " +
+              [...this.aggregateFunctions].join(", ");
+            return { name: t.name, description: t.description, inputSchema };
           }
-        } satisfies Tool;
-        tools.push(t);
-      }
+          return { name: t.name, description: t.description, inputSchema: t.inputSchema };
+        }) satisfies Tool[];
 
       return { tools };
     });

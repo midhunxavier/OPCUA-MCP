@@ -1,0 +1,28 @@
+{
+  "//": "Copy to .mcp.json and replace /ABSOLUTE/PATH/TO/OPCUA-MCP with your local checkout path. .mcp.json is gitignored (machine-specific paths). Build the npx server first: cd packages/server-node && npm install && npm run build",
+  "mcpServers": {
+    "opcua-python": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/ABSOLUTE/PATH/TO/OPCUA-MCP/packages/server-python",
+        "run",
+        "opcua-mcp-server"
+      ],
+      "env": {
+        "OPCUA_SERVER_URL": "opc.tcp://localhost:4840/freeopcua/server/"
+      }
+    },
+    "opcua-npx": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/ABSOLUTE/PATH/TO/OPCUA-MCP/packages/server-node/build/index.js"
+      ],
+      "env": {
+        "OPCUA_SERVER_URL": "opc.tcp://localhost:4840/freeopcua/server/"
+      }
+    }
+  }
+}

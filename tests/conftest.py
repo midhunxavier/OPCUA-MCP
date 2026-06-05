@@ -46,8 +46,8 @@ def opcua_server() -> str:
         return
 
     proc = subprocess.Popen(
-        ["uv", "run", "main.py"],
-        cwd=ROOT / "opcua-local-server",
+        ["uv", "run", "--no-sync", "opcua-mock-server"],
+        cwd=ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

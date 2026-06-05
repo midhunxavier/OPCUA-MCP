@@ -4,8 +4,8 @@
 
 **Read industrial sensors and control equipment on any OPC UA server — through natural language with Claude and any MCP client.**
 
-[![npm version](https://img.shields.io/npm/v/opcua-mcp-npx-server)](https://www.npmjs.com/package/opcua-mcp-npx-server)
-[![npm downloads](https://img.shields.io/npm/dm/opcua-mcp-npx-server)](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[![npm version](https://img.shields.io/npm/v/opcua-mcp-server)](https://www.npmjs.com/package/opcua-mcp-server)
+[![npm downloads](https://img.shields.io/npm/dm/opcua-mcp-server)](https://www.npmjs.com/package/opcua-mcp-server)
 [![CI](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/midhunxavier/OPCUA-MCP)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/midhunxavier/OPCUA-MCP?style=social)](https://github.com/midhunxavier/OPCUA-MCP)
@@ -15,7 +15,7 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#quick-start) · [Examples](EXAMPLES.md) · [Testing](TESTING.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
 
 </div>
 
@@ -39,7 +39,7 @@ flowchart LR
 The fastest path — the npx server, no clone required:
 
 ```bash
-npx opcua-mcp-npx-server
+npx opcua-mcp-server
 ```
 
 Then point your MCP client at it (see [Configuration](#configuration)):
@@ -49,7 +49,7 @@ Then point your MCP client at it (see [Configuration](#configuration)):
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
     }
   }
@@ -125,91 +125,38 @@ Result: "Found 15 variables:
 - **Framework**: FastMCP
 - **OPC UA Library**: `opcua` (FreeOpcUa)
 - **Transport**: STDIO
-- **Entry Point**: `opcua-mcp-server.py`
+- **Entry Point**: `opcua_mcp_server.py` (console script: `opcua-mcp-server`)
 
-### NPX Version (`opcua-mcp-npx-server`)
+### Node Version (`opcua-mcp-server`)
 - **Language**: TypeScript/Node.js
 - **Framework**: @modelcontextprotocol/sdk
 - **OPC UA Library**: `node-opcua`
 - **Transport**: STDIO
 - **Entry Point**: `src/index.ts` (compiled to `build/index.js`)
 
-## Features Comparison
+## Tools
 
-| Feature | Python Version | NPX Version | Notes |
-|---------|----------------|-------------|-------|
-| Read Single Node | ✅ | ✅ | Both support automatic type detection |
-| Write Single Node | ✅ | ✅ | Both support automatic type conversion |
-| Browse Node Children | ✅ | ✅ | Both return JSON formatted results |
-| Call OPC UA Methods | ✅ | ✅ | Both support parameter conversion |
-| Read Multiple Nodes | ✅ | ✅ | Batch read operations |
-| Write Multiple Nodes | ✅ | ✅ | Batch write operations |
-| Get All Variables | ✅ | ✅ | Discover all variables in server address space |
-| Connection Management | ✅ | ✅ | Both handle lifecycle automatically |
-| Error Handling | ✅ | ✅ | Comprehensive error reporting |
-| Type Conversion | ✅ | ✅ | Automatic data type conversion |
-
-## Tool Implementations
-
-### Available Tools (Both Versions)
-
-1. **`read_opcua_node`**
-   - Read value from a single OPC UA node
-   - Parameters: `node_id` (string)
-   - Returns: Node value with ID prefix
-
-2. **`write_opcua_node`**
-   - Write value to a single OPC UA node
-   - Parameters: `node_id` (string), `value` (string)
-   - Returns: Success/failure message
-
-3. **`browse_opcua_node_children`**
-   - Browse children of an OPC UA node
-   - Parameters: `node_id` (string)
-   - Returns: Array of child nodes with IDs and browse names
-
-4. **`read_multiple_opcua_nodes`**
-   - Read values from multiple nodes in one request
-   - Parameters: `node_ids` (array of strings)
-   - Returns: Dictionary mapping node IDs to values
-
-5. **`write_multiple_opcua_nodes`**
-   - Write values to multiple nodes in one request
-   - Parameters: `nodes_to_write` (array of {node_id, value} objects)
-   - Returns: Status results for each write operation
-
-6. **`call_opcua_method`**
-   - Call a method on an OPC UA object
-   - Parameters: `object_node_id`, `method_node_id`, `arguments` (optional)
-   - Returns: Method execution result
-
-7. **`get_all_variables`**
-   - Get all available variables from the OPC UA server
-   - Parameters: None
-   - Returns: Comprehensive list of all variables with their properties (name, node ID, value, data type, description)
+Both servers expose the same MCP tools — read / write / browse nodes, batch read & write, call methods, list all variables, plus capability-gated history and aggregate reads. The full per-tool reference (inputs, outputs, and a node-ID map) is in **[docs/examples.md](docs/examples.md)**, and the tool surface is defined once in [`contract/tools.json`](contract/tools.json) (both servers derive from it).
 
 ## Deployment & Installation
 
 ### Python Version
 ```bash
-# Installation
-cd opcua-mcp-server
-uv install  # or pip install
+# Install the Python workspace (from the repo root)
+uv sync --all-packages
 
-# Usage
-uv run opcua-mcp-server.py
-# or
-python opcua-mcp-server.py
+# Run the Python server
+uv run --no-sync opcua-mcp-server
 ```
 
 ### NPX Version
 ```bash
 # Direct usage (recommended)
-npx opcua-mcp-npx-server
+npx opcua-mcp-server
 
 # Global installation
-npm install -g opcua-mcp-npx-server
-opcua-mcp-npx-server
+npm install -g opcua-mcp-server
+opcua-mcp-server
 
 # Development
 npm install
@@ -217,7 +164,7 @@ npm run build
 npm start
 ```
 
-**NPM Package**: https://www.npmjs.com/package/opcua-mcp-npx-server
+**NPM Package**: https://www.npmjs.com/package/opcua-mcp-server
 
 ## Configuration
 
@@ -232,9 +179,9 @@ Both versions use the same environment variable:
       "command": "/Users/mx/.local/bin/uv",
       "args": [
         "--directory",
-        "/path/to/opcua-mcp-server",
+        "/path/to/packages/server-python",
         "run",
-        "opcua-mcp-server.py"
+        "opcua-mcp-server"
       ],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
@@ -250,7 +197,7 @@ Both versions use the same environment variable:
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
       }
@@ -281,11 +228,12 @@ Inspector (UI or CLI), and an AI agent (Claude Code / Desktop / Cursor). Start t
 mock server first, then:
 
 ```bash
-cd tests && uv run pytest -v        # end-to-end suite, both servers
+uv sync --all-packages              # one-time, from the repo root
+cd tests && uv run --no-sync pytest -v    # end-to-end suite, both servers
 ```
 
-See **[TESTING.md](TESTING.md)** for the full guide (Inspector walkthrough, AI-agent
-setup, example prompts, troubleshooting) and **[EXAMPLES.md](EXAMPLES.md)** for
+See **[docs/testing.md](docs/testing.md)** for the full guide (Inspector walkthrough, AI-agent
+setup, example prompts, troubleshooting) and **[docs/examples.md](docs/examples.md)** for
 per-tool inputs/outputs and a node-ID reference.
 
 ## Contributing

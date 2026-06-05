@@ -12,6 +12,40 @@ from opcua.ua import NodeClass
 
 server_url = os.getenv("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
 
+import json
+from pathlib import Path
+
+
+def _load_contract() -> dict:
+    """Load the shared tool contract (single source of truth).
+
+    The canonical file is ``/contract/tools.json`` at the repo root, read directly
+    when running from the source tree (dev / editable installs / tests). When the
+    package is installed as a wheel the contract is bundled next to this module
+    (see the ``force-include`` in pyproject.toml), so the installed copy is found
+    there instead. Without the bundled copy a pip/uvx install would raise
+    FileNotFoundError on import, since parents[2] is not the repo root.
+    """
+    here = Path(__file__).resolve()
+    candidates = (
+        here.parent / "opcua_mcp_server_contract.json",  # bundled in the wheel
+        here.parents[2] / "contract" / "tools.json",     # repo-root source layout
+    )
+    for path in candidates:
+        if path.is_file():
+            return json.loads(path.read_text())
+    raise FileNotFoundError(
+        "Shared tool contract not found; looked in "
+        + ", ".join(str(p) for p in candidates)
+    )
+
+
+# Shared tool contract so tool descriptions and capability node IDs stay in sync
+# with the Node server.
+_CONTRACT = _load_contract()
+_DESC = {t["name"]: t["description"] for t in _CONTRACT["tools"]}
+_HISTORY_NODE_ID = _CONTRACT["capabilities"]["history"]["nodeId"]
+
 # Manage the lifecycle of the OPC UA client connection
 @asynccontextmanager
 async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
@@ -32,7 +66,7 @@ async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 mcp = FastMCP("OPCUA-Control", lifespan=opcua_lifespan)
 
 # Tool: Read the value of an OPC UA node
-@mcp.tool()
+@mcp.tool(description=_DESC["read_opcua_node"])
 def read_opcua_node(node_id: str, ctx: Context) -> str:
     """
     Read the value of a specific OPC UA node.
@@ -49,13 +83,30 @@ def read_opcua_node(node_id: str, ctx: Context) -> str:
     value = node.get_value()  # Synchronous call to get node value
     return f"Node {node_id} value: {value}"
 
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    """Parse an optional ISO-8601 string into a datetime.
+
+    MCP delivers these as strings, so they are converted here before being handed
+    to the opcua client. Mirrors the npx server's ``toDate`` error wording so both
+    servers reject malformed input identically.
+    """
+    if value is None:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        raise ValueError(
+            f'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z'
+        )
+
+
 # Tool: Read historical values of an OPC UA node.
 # Registered only when the server supports historical data access (see below),
 # mirroring the npx server's capability gating.
 def read_history_opcua_node(node_id: str,
                             ctx: Context,
-                            start_time: datetime | None = None,
-                            end_time: datetime | None = None,
+                            start_time: str | None = None,
+                            end_time: str | None = None,
                             num_values: int = 0) -> list[dict]:
     """
     Read the historical values of a specific OPC UA node.
@@ -63,10 +114,10 @@ def read_history_opcua_node(node_id: str,
     Parameters:
         node_id (str): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'.
                        Example: 'ns=2;i=2'.
-        start_time (datetime): Start time (ISO 8601).
-                               Example: '2026-04-22T18:50:00'
-        end_time (datetime): End time (ISO 8601).
-                             Example: '2026-04-22T18:51:00'
+        start_time (str): Start time (ISO 8601).
+                          Example: '2026-04-22T18:50:00Z'
+        end_time (str): End time (ISO 8601).
+                        Example: '2026-04-22T18:51:00Z'
         num_values (int): Number of values to read (default: unlimited)
 
     Returns:
@@ -74,7 +125,11 @@ def read_history_opcua_node(node_id: str,
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
     node = client.get_node(node_id)
-    values = node.read_raw_history(starttime=start_time, endtime=end_time, numvalues=num_values)
+    values = node.read_raw_history(
+        starttime=_parse_iso_datetime(start_time),
+        endtime=_parse_iso_datetime(end_time),
+        numvalues=num_values,
+    )
     return [
         {
             "value": str(v.Value.Value),
@@ -95,7 +150,7 @@ def _server_supports_history(url: str) -> bool:
         probe = Client(url)
         probe.connect()
         try:
-            return bool(probe.get_node("ns=0;i=11193").get_value())
+            return bool(probe.get_node(_HISTORY_NODE_ID).get_value())
         finally:
             probe.disconnect()
     except Exception:
@@ -104,11 +159,11 @@ def _server_supports_history(url: str) -> bool:
 
 # Conditionally register the history tool based on server capability.
 if _server_supports_history(server_url):
-    read_history_opcua_node = mcp.tool()(read_history_opcua_node)
+    read_history_opcua_node = mcp.tool(description=_DESC["read_history_opcua_node"])(read_history_opcua_node)
 
 
 # Tool: Write a value to an OPC UA node
-@mcp.tool()
+@mcp.tool(description=_DESC["write_opcua_node"])
 def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
     """
     Write a value to a specific OPC UA node.
@@ -138,7 +193,7 @@ def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
         return f"Error writing to node {node_id}: {str(e)}"
 
 # Tool: Browse the children of a specific OPC UA node
-@mcp.tool()
+@mcp.tool(description=_DESC["browse_opcua_node_children"])
 def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
     """
     Browse the children of a specific OPC UA node.
@@ -177,7 +232,7 @@ def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
         return f"Error Browse children of node {node_id}: {str(e)}"
 
 # Tool: Call an OPC UA method
-@mcp.tool()
+@mcp.tool(description=_DESC["call_opcua_method"])
 def call_opcua_method(object_node_id: str, method_node_id: str, ctx: Context, arguments: List[Any] = None) -> str:
     """
     Call a method on a specific OPC UA object node.
@@ -231,7 +286,7 @@ def call_opcua_method(object_node_id: str, method_node_id: str, ctx: Context, ar
         return f"Error calling method {method_node_id} on object {object_node_id}: {str(e)}"
 
 # Tool: Read multiple OPC UA nodes
-@mcp.tool()
+@mcp.tool(description=_DESC["read_multiple_opcua_nodes"])
 def read_multiple_opcua_nodes(node_ids: List[str], ctx: Context) -> str:
     """
     Read the values of multiple OPC UA nodes in a single request.
@@ -259,7 +314,7 @@ def read_multiple_opcua_nodes(node_ids: List[str], ctx: Context) -> str:
         return f"Error reading multiple nodes: {str(e)}"
 
 # Tool: Write multiple OPC UA nodes
-@mcp.tool()
+@mcp.tool(description=_DESC["write_multiple_opcua_nodes"])
 def write_multiple_opcua_nodes(nodes_to_write: List[Dict[str, Any]], ctx: Context) -> str:
     """
     Write values to multiple OPC UA nodes in a single request.
@@ -307,7 +362,7 @@ def write_multiple_opcua_nodes(nodes_to_write: List[Dict[str, Any]], ctx: Contex
         return f"Error writing multiple nodes: {str(e)}"
 
 # Tool: Get all variables information
-@mcp.tool()
+@mcp.tool(description=_DESC["get_all_variables"])
 def get_all_variables(ctx: Context) -> str:
     """
     Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object.
@@ -399,6 +454,10 @@ def get_all_variables(ctx: Context) -> str:
         return f"Error while finding variables: {str(e)}"
 
 # Run the server
+def main() -> None:
+    """Entry point for the `opcua-mcp-server` console script."""
+    mcp.run(transport="stdio")
+
+
 if __name__ == "__main__":
-    # Initialize and run the server
-    mcp.run(transport='stdio') 
+    main()

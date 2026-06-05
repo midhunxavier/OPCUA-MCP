@@ -7,14 +7,17 @@ Outputs below are real (abbreviated) responses captured end-to-end.
 ## Quick start
 
 ```bash
+# 0) One-time: set up the Python workspace (from the repo root)
+uv sync --all-packages
+
 # 1) Start the mock OPC UA server (the simulated PLC/sensors)
-cd opcua-local-server && uv run main.py        # listens on opc.tcp://localhost:4840/freeopcua/server/
+uv run --no-sync opcua-mock-server        # listens on opc.tcp://localhost:4840/freeopcua/server/
 
 # 2a) Python MCP server
-cd opcua-mcp-server && OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run opcua-mcp-server.py
+OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run --no-sync opcua-mcp-server
 
 # 2b) npx MCP server
-cd opcua-mcp-npx-server && npm install && npm run build
+cd packages/server-node && npm install && npm run build
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ node build/index.js
 ```
 
@@ -183,5 +186,5 @@ functions** — the bundled mock does not, so this tool is not exposed against i
 ## Tip
 
 You don't call these tools by hand in normal use — you ask Claude. The JSON above
-is what Claude sends under the hood. See `tests/` for an automated suite that
+is what Claude sends under the hood. See `../tests/` for an automated suite that
 exercises every tool against both servers.

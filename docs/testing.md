@@ -10,13 +10,14 @@ Three ways to test, from fully automated to fully interactive:
 > device the MCP servers talk to.
 >
 > ```bash
-> cd opcua-local-server && uv run main.py
+> uv sync --all-packages            # one-time, from the repo root
+> uv run --no-sync opcua-mock-server
 > # opc.tcp://localhost:4840/freeopcua/server/  (history enabled on all variables)
 > ```
 >
-> Build the npx server once: `cd opcua-mcp-npx-server && npm install && npm run build`.
+> Build the npx server once: `cd packages/server-node && npm install && npm run build`.
 
-A handy node-ID reference and per-tool examples live in [EXAMPLES.md](EXAMPLES.md).
+A handy node-ID reference and per-tool examples live in [examples.md](examples.md).
 Common nodes: Temperature `ns=2;i=3`, PumpEnabled `ns=2;i=12`, ValvePosition
 `ns=2;i=13`, SystemMode `ns=2;i=19`, Methods folder `ns=2;i=27`, StartProduction
 `ns=2;i=28`.
@@ -29,14 +30,15 @@ Drives **both** servers over stdio with the official `mcp` client SDK and assert
 on real responses. 22 tests (11 cases × Python + npx).
 
 ```bash
+uv sync --all-packages         # one-time, from the repo root
 cd tests
-uv run pytest -v
-uv run pytest -v -k python     # only the Python server
-uv run pytest -v -k npx        # only the npx server
+uv run --no-sync pytest -v
+uv run --no-sync pytest -v -k python     # only the Python server
+uv run --no-sync pytest -v -k npx        # only the npx server
 ```
 
 The suite reuses a mock server already on `:4840`, or starts its own. See
-[tests/README.md](tests/README.md) for the full matrix.
+[../tests/README.md](../tests/README.md) for the full matrix.
 
 ---
 
@@ -50,11 +52,11 @@ is the standard tool for exercising an MCP server by hand.
 ```bash
 # npx server
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
-  npx @modelcontextprotocol/inspector node opcua-mcp-npx-server/build/index.js
+  npx @modelcontextprotocol/inspector node packages/server-node/build/index.js
 
 # Python server
-cd opcua-mcp-server && OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
-  npx @modelcontextprotocol/inspector uv run opcua-mcp-server.py
+OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
+  npx @modelcontextprotocol/inspector uv --directory packages/server-python run opcua-mcp-server
 ```
 
 It prints a `http://localhost:6274/?...` URL. In the browser:
@@ -81,7 +83,7 @@ Things to try:
 
 ```bash
 URL=opc.tcp://localhost:4840/freeopcua/server/
-BIN="npx -y @modelcontextprotocol/inspector --cli node opcua-mcp-npx-server/build/index.js -e OPCUA_SERVER_URL=$URL"
+BIN="npx -y @modelcontextprotocol/inspector --cli node packages/server-node/build/index.js -e OPCUA_SERVER_URL=$URL"
 
 # list tools
 $BIN --method tools/list
@@ -97,7 +99,7 @@ $BIN --method tools/call --tool-name call_opcua_method \
 ```
 
 For the Python server, swap the command for
-`uv run opcua-mcp-server.py` (run from `opcua-mcp-server/`).
+`uv --directory packages/server-python run opcua-mcp-server`.
 
 ---
 
@@ -113,9 +115,9 @@ Register both servers at **project scope** (writes `.mcp.json` in the repo root)
 ROOT=$(pwd)
 URL=opc.tcp://localhost:4840/freeopcua/server/
 claude mcp add opcua-python -s project -e OPCUA_SERVER_URL=$URL \
-  -- uv --directory "$ROOT/opcua-mcp-server" run opcua-mcp-server.py
+  -- uv --directory "$ROOT/packages/server-python" run opcua-mcp-server
 claude mcp add opcua-npx -s project -e OPCUA_SERVER_URL=$URL \
-  -- node "$ROOT/opcua-mcp-npx-server/build/index.js"
+  -- node "$ROOT/packages/server-node/build/index.js"
 ```
 
 Then, in a **new** Claude Code session started in this directory:
@@ -144,7 +146,7 @@ Add to `claude_desktop_config.json`
   "mcpServers": {
     "opcua-npx": {
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/OPCUA-MCP/opcua-mcp-npx-server/build/index.js"],
+      "args": ["/ABSOLUTE/PATH/OPCUA-MCP/packages/server-node/build/index.js"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840/freeopcua/server/" }
     }
   }
@@ -162,7 +164,7 @@ ask Cursor's assistant the prompts above.
 
 | Symptom | Cause / fix |
 |---------|-------------|
-| **List Tools is empty or errors** | Mock server not running → `cd opcua-local-server && uv run main.py` |
+| **List Tools is empty or errors** | Mock server not running → `uv run --no-sync opcua-mock-server` |
 | **`read_history_opcua_node` not listed** | Connected to a server without history, or wrong `OPCUA_SERVER_URL` |
 | **`read_aggregate_opcua_node` not listed** | Expected — the bundled mock advertises no aggregate functions, so the tool is correctly hidden |
 | **`Address already in use` on :4840** | A mock server is already running; reuse it, or `lsof -tiTCP:4840 -sTCP:LISTEN \| xargs kill` |

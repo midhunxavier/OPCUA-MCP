@@ -11,18 +11,11 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 - Calling OPC UA methods for system operations
 - Batch operations for multiple nodes
 
+## Tools
+
+See the central per-tool reference in **[../../docs/examples.md](../../docs/examples.md)**; the shared tool surface is defined in **[../../contract/tools.json](../../contract/tools.json)**.
+
 ## Features
-
-### Core Tools
-
-- **`read_opcua_node`** - Read the current value of any OPC UA node
-- **`read_history_opcua_node`** - Read the historical values of a specific OPC UA node (only exposed if the server supports historical data access)
-- **`write_opcua_node`** - Write values to OPC UA nodes with automatic type conversion
-- **`browse_opcua_node_children`** - Explore the OPC UA address space and discover available nodes
-- **`call_opcua_method`** - Execute OPC UA methods on server objects
-- **`read_multiple_opcua_nodes`** - Batch read multiple nodes in a single operation
-- **`write_multiple_opcua_nodes`** - Batch write to multiple nodes efficiently
-- **`get_all_variables`** - Retrieve all available variables from the OPC UA server with their metadata
 
 ### Key Capabilities
 
@@ -42,22 +35,12 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 
 ### Setup
 
-1. **Clone or download the project:**
+1. **Install dependencies for the whole workspace (run from the repo root):**
    ```bash
-   cd packages/server-python
+   uv sync --all-packages
    ```
 
-2. **Install dependencies using UV:**
-   ```bash
-   uv sync
-   ```
-
-   **Or using pip:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure the OPC UA server URL:**
+2. **Configure the OPC UA server URL:**
    ```bash
    export OPCUA_SERVER_URL="opc.tcp://localhost:4840"
    ```
@@ -66,14 +49,14 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 
 ### Running the Server
 
-**With UV:**
+After `uv sync --all-packages` from the repo root:
 ```bash
-uv run opcua-mcp-server
+uv run --no-sync opcua-mcp-server
 ```
 
-**With Python:**
+Or run it directly against this package from anywhere in the repo:
 ```bash
-python opcua_mcp_server.py
+uv --directory packages/server-python run opcua-mcp-server
 ```
 
 ### Integration with MCP Clients
@@ -160,44 +143,4 @@ Result: Found 5 variables:
 
 ## API Reference
 
-### Reading Data
-
-**Read a single node:**
-```python
-read_opcua_node(node_id="ns=2;i=3")
-# Returns: "Node ns=2;i=3 value: 26.57"
-```
-
-**Read historical values from a single node:**
-```python
-read_history_opcua_node(node_id="ns=2;i=3", num_values=1)
-# Returns: [ { "value": "26.57", "timestamp": "2026-04-22 18:51:05.163834", "status": "Good" }]
-```
-
-**Read multiple nodes:**
-```python
-read_multiple_opcua_nodes(node_ids=["ns=2;i=3", "ns=2;i=4", "ns=2;i=5"])
-# Returns: Multiple node read results with all values
-```
-
-**Get all variables:**
-```python
-get_all_variables()
-# Returns: Complete list of all variables with their metadata including:
-# - Name, NodeID, Object ID, Current Value, Data Type, Description
-# Example output:
-# - Name: Temperature, NodeID: ns=2;i=2, Value: 25.3, Data Type: i=11, Description: Temperature sensor (°C)
-# - Name: Pressure, NodeID: ns=2;i=3, Value: 5.0, Data Type: i=11, Description: Pressure sensor (bar)
-```
-
-### System Discovery
-```python
-# Explore available sensors
-browse_opcua_node_children("ns=2;i=2")  # Sensors folder
-
-# Explore available actuators  
-browse_opcua_node_children("ns=2;i=11") # Actuators folder
-
-# Get complete overview of all variables
-get_all_variables()  # Returns all variables with metadata
-```
+See the central per-tool reference in **[../../docs/examples.md](../../docs/examples.md)** for full tool signatures, parameters, and return formats. The shared tool surface is defined in **[../../contract/tools.json](../../contract/tools.json)**.

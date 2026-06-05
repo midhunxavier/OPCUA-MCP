@@ -134,59 +134,9 @@ Result: "Found 15 variables:
 - **Transport**: STDIO
 - **Entry Point**: `src/index.ts` (compiled to `build/index.js`)
 
-## Features Comparison
+## Tools
 
-| Feature | Python Version | NPX Version | Notes |
-|---------|----------------|-------------|-------|
-| Read Single Node | ✅ | ✅ | Both support automatic type detection |
-| Write Single Node | ✅ | ✅ | Both support automatic type conversion |
-| Browse Node Children | ✅ | ✅ | Both return JSON formatted results |
-| Call OPC UA Methods | ✅ | ✅ | Both support parameter conversion |
-| Read Multiple Nodes | ✅ | ✅ | Batch read operations |
-| Write Multiple Nodes | ✅ | ✅ | Batch write operations |
-| Get All Variables | ✅ | ✅ | Discover all variables in server address space |
-| Connection Management | ✅ | ✅ | Both handle lifecycle automatically |
-| Error Handling | ✅ | ✅ | Comprehensive error reporting |
-| Type Conversion | ✅ | ✅ | Automatic data type conversion |
-
-## Tool Implementations
-
-### Available Tools (Both Versions)
-
-1. **`read_opcua_node`**
-   - Read value from a single OPC UA node
-   - Parameters: `node_id` (string)
-   - Returns: Node value with ID prefix
-
-2. **`write_opcua_node`**
-   - Write value to a single OPC UA node
-   - Parameters: `node_id` (string), `value` (string)
-   - Returns: Success/failure message
-
-3. **`browse_opcua_node_children`**
-   - Browse children of an OPC UA node
-   - Parameters: `node_id` (string)
-   - Returns: Array of child nodes with IDs and browse names
-
-4. **`read_multiple_opcua_nodes`**
-   - Read values from multiple nodes in one request
-   - Parameters: `node_ids` (array of strings)
-   - Returns: Dictionary mapping node IDs to values
-
-5. **`write_multiple_opcua_nodes`**
-   - Write values to multiple nodes in one request
-   - Parameters: `nodes_to_write` (array of {node_id, value} objects)
-   - Returns: Status results for each write operation
-
-6. **`call_opcua_method`**
-   - Call a method on an OPC UA object
-   - Parameters: `object_node_id`, `method_node_id`, `arguments` (optional)
-   - Returns: Method execution result
-
-7. **`get_all_variables`**
-   - Get all available variables from the OPC UA server
-   - Parameters: None
-   - Returns: Comprehensive list of all variables with their properties (name, node ID, value, data type, description)
+Both servers expose the same MCP tools — read / write / browse nodes, batch read & write, call methods, list all variables, plus capability-gated history and aggregate reads. The full per-tool reference (inputs, outputs, and a node-ID map) is in **[docs/examples.md](docs/examples.md)**, and the tool surface is defined once in [`contract/tools.json`](contract/tools.json) (both servers derive from it).
 
 ## Deployment & Installation
 

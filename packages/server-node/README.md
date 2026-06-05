@@ -1,6 +1,6 @@
-# OPC UA MCP NPX Server
+# OPC UA MCP Server (Node)
 
-An NPX-based Model Context Protocol (MCP) server for OPC UA operations. This server provides a set of tools to interact with OPC UA servers, including reading/writing variables, browsing nodes, calling methods, and performing batch operations.
+A Node / TypeScript Model Context Protocol (MCP) server for OPC UA operations, runnable with `npx`. This server provides a set of tools to interact with OPC UA servers, including reading/writing variables, browsing nodes, calling methods, and performing batch operations.
 
 ## Features
 
@@ -17,9 +17,9 @@ An NPX-based Model Context Protocol (MCP) server for OPC UA operations. This ser
 
 ## Installation & Usage
 
-### Using NPX (Recommended)
+### Using npx (Recommended)
 
-You can run the server directly using NPX without installing it globally:
+You can run the server directly using npx without installing it globally:
 
 ```bash
 npx opcua-mcp-server
@@ -53,160 +53,9 @@ Example:
 OPCUA_SERVER_URL=opc.tcp://192.168.1.100:4840 npx opcua-mcp-server
 ```
 
-## MCP Tools
+## Tools
 
-### 1. read_opcua_node
-
-Read the value of a specific OPC UA node.
-
-**Parameters:**
-- `node_id` (string): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'
-
-**Example:**
-```json
-{
-  "node_id": "ns=2;i=1"
-}
-```
-
-### 2. write_opcua_node
-
-Write a value to a specific OPC UA node.
-
-**Parameters:**
-- `node_id` (string): The OPC UA node ID
-- `value` (string): The value to write (automatically converted to the correct type)
-
-**Example:**
-```json
-{
-  "node_id": "ns=2;i=2",
-  "value": "75.5"
-}
-```
-
-### 3. browse_opcua_node_children
-
-Browse the children of a specific OPC UA node.
-
-**Parameters:**
-- `node_id` (string): The OPC UA node ID to browse
-
-**Example:**
-```json
-{
-  "node_id": "ns=2;i=3"
-}
-```
-
-### 4. read_multiple_opcua_nodes
-
-Read values from multiple OPC UA nodes in a single request.
-
-**Parameters:**
-- `node_ids` (array): List of OPC UA node IDs to read
-
-**Example:**
-```json
-{
-  "node_ids": [
-    "ns=2;i=4", 
-    "ns=2;i=5", 
-    "ns=2;i=6"
-  ]
-}
-```
-
-### 5. write_multiple_opcua_nodes
-
-Write values to multiple OPC UA nodes in a single request.
-
-**Parameters:**
-- `nodes_to_write` (array): List of objects containing 'node_id' and 'value'
-
-**Example:**
-```json
-{
-  "nodes_to_write": [
-    {"node_id": "ns=2;i=7", "value": "50"},
-    {"node_id": "ns=2;i=8", "value": "true"}
-  ]
-}
-```
-
-### 6. call_opcua_method
-
-Call a method on a specific OPC UA object node.
-
-**Parameters:**
-- `object_node_id` (string): The OPC UA node ID of the object containing the method
-- `method_node_id` (string): The OPC UA node ID of the method to call
-- `arguments` (array, optional): List of arguments to pass to the method
-
-**Example:**
-```json
-{
-  "object_node_id": "ns=2;i=9",
-  "method_node_id": "ns=2;i=10",
-  "arguments": ["25.0", "high_quality"]
-}
-```
-
-### 7. get_all_variables
-
-Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object.
-
-**Parameters:**
-- None required
-
-**Example:**
-```json
-{}
-```
-
-**Returns:**
-A comprehensive list of all variables with their properties including name, node ID, object ID, current value, data type, and description.
-
-### 8. read_history_opcua_node
-
-Read the historical values of a specific OPC UA node.
-
-**Parameters:**
-- `node_id` (string): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'
-- `start_time` (datetime)
-- `end_time` (datetime)
-- `num_values` (int): Number of values to read (default: unlimited)
-
-**Example:**
-```json
-{
-  "node_id": "ns=2;i=1",
-  "start_time": "2026-04-23 17:40:00",
-  "end_time": "2026-04-23 17:45:00"
-}
-```
-
-### 9. read_aggregate_opcua_node
-
-Calculate the historical aggregates over a defined time range, divided into smaller chunks defined by the `processing_interval` (in milliseconds). The server divides the [`start_time`, `end_time`] domain into these intervals, returning one aggregated value per interval.
-
-**Parameters:**
-- `node_id` (string): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'
-- `start_time` (datetime): Beginning of the retrieval
-- `end_time` (datetime): End of the retrieval (defaults to 'now')
-- `aggregate_function` (string): The specific formula, e.g. Average, Minimum, Maximum
-- `processing_interval` (number): The duration (ms) for each computed value. If set to 0, the server calculates a single aggregate value for the entire range.
-
-**Example:**
-```json
-{
-  "node_id": "ns=2;i=1",
-  "start_time": "2026-04-23 17:40:00",
-  "end_time": "2026-04-23 17:45:00",
-  "aggregate_function": "Average",
-  "processing_interval": "60000"
-}
-```
+This server exposes the shared OPC UA MCP tool set. See the full per-tool reference (inputs, outputs, node-ID map) in **[../../docs/examples.md](../../docs/examples.md)**. The tool surface is defined once in **[../../contract/tools.json](../../contract/tools.json)**, which this server builds its `tools/list` from.
 
 ## Integration with Cursor/Claude
 
@@ -331,7 +180,7 @@ The server provides detailed error messages for:
 
 ## Contributing
 
-We welcome contributions to improve the OPC UA MCP NPX Server! 
+We welcome contributions to improve the OPC UA MCP Server! 
 
 **Repository**: [https://github.com/midhunxavier/OPCUA-MCP](https://github.com/midhunxavier/OPCUA-MCP)
 

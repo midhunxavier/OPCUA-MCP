@@ -67,7 +67,7 @@ What stays duplicated (accepted): ~10 lines of per-tool logic per language.
 | 2 | Python: uv workspace + real package | ✅ done |
 | 3 | npm rename across all leak points | ✅ done |
 | 4 | Shared contract + parity test | ✅ done |
-| 5 | Docs consolidation | ⬜ todo |
+| 5 | Docs consolidation | ✅ done |
 | 6 | Final validation & PR | ⬜ todo |
 
 ### Phase 1 — Folder reorg (done)

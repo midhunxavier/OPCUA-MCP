@@ -21,8 +21,7 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 AI assistant / MCP client  ──stdio──►  MCP server (Python OR npx)  ──OPC UA/TCP──►  mock server :4840
 ```
 
-The two MCP servers are intended to **mirror each other**: a tool added to one
-should be added to the other with the **same name and arguments**.
+The two MCP servers share a single tool contract ([`contract/tools.json`](contract/tools.json)): the Node server builds its `tools/list` from it and the Python server reads descriptions and capability node IDs from it, so they cannot drift (`tests/test_contract_parity.py` enforces this).
 
 ## Prerequisites
 
@@ -71,24 +70,13 @@ agent, see **[docs/testing.md](docs/testing.md)**.
 
 ## Adding a new MCP tool
 
-Keep the two servers in sync. To add a tool `foo`:
+The tool surface is defined once in [`contract/tools.json`](contract/tools.json); both servers derive from it, and `tests/test_contract_parity.py` fails if they diverge. To add a tool `foo`:
 
-1. **Python** (`packages/server-python/opcua_mcp_server.py`): add a function decorated
-   with `@mcp.tool()`, typed args, a docstring, and `ctx: Context` to reach the
-   OPC UA client. Return a `str` or JSON-serialisable value.
-2. **npx** (`packages/server-node/src/index.ts`): add the tool to the
-   `ListToolsRequestSchema` handler (`name`, `description`, `inputSchema`), add a
-   `case` to the `CallToolRequestSchema` switch, and implement a private method.
-   Run `npm run build`.
-3. **Match names and arguments** across both servers.
-4. **Capability-gate** optional features. If a tool depends on a server
-   capability (as history/aggregate do), only advertise it when the capability is
-   present — see `read_history_opcua_node` (`AccessHistoryDataCapability`,
-   `ns=0;i=11193`) and `read_aggregate_opcua_node` (`AggregateFunctions`,
-   `ns=0;i=2997`).
-5. **Add an end-to-end test** in `tests/test_mcp_e2e.py` (it runs against both
-   servers automatically).
-6. **Document it** in the server READMEs and `docs/examples.md`.
+1. **Contract** (`contract/tools.json`): add an entry under `tools` with its `name`, `description`, `inputSchema` (JSON Schema), and `capability` (`null`, or `"history"`/`"aggregate"` if it depends on a server capability).
+2. **Node** (`packages/server-node/src/index.ts`): add a `case "foo"` to the `CallToolRequestSchema` switch and implement the handler. You do **not** edit `tools/list` — it is generated from the contract. Run `npm run build` (this also copies the contract into `build/`).
+3. **Python** (`packages/server-python/opcua_mcp_server.py`): add a function decorated with `@mcp.tool(description=_DESC["foo"])`, with typed args (FastMCP derives the input schema from them — keep it matching the contract) and `ctx: Context`. For a capability-gated tool, register it conditionally like `read_history_opcua_node`.
+4. **Test**: add an end-to-end test in `tests/test_mcp_e2e.py` (it runs against both servers). The contract-parity test will automatically check that both servers advertise the new tool with the contract's description and parameters.
+5. **Document it** in `docs/examples.md` (the central per-tool reference).
 
 ## Code style
 

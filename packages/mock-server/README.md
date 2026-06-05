@@ -52,9 +52,9 @@ A comprehensive mockup OPC UA server for industrial control systems, featuring r
 ## Installation
 
 1. Ensure you have Python 3.13+ installed
-2. Install dependencies:
+2. Install dependencies for the whole workspace (run from the repo root):
    ```bash
-   uv install
+   uv sync --all-packages
    ```
 
 ## Usage
@@ -158,8 +158,8 @@ The server supports multiple security policies:
 ## Development
 
 ### File Structure
-- `main.py` - Entry point
-- `opcua_local_server.py` - Main server implementation
+- `opcua_local_server.py` - Main server implementation and entry point
+- `client_example.py` - Example OPC UA client
 - `pyproject.toml` - Project configuration and dependencies
 
 ### Extending the System

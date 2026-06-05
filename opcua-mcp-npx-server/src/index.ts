@@ -132,18 +132,27 @@ class OPCUAMCPServer {
   }
 
   private async accessHistoryDataCapability(): Promise<boolean> {
-    await this.ensureConnection();
-    const dataValue = await this.session!.readVariableValue("ns=0;i=11193"); // AccessHistoryDataCapability
-    return (
-      dataValue.statusCode === StatusCodes.Good &&
-      dataValue.value?.value === true
-    );
+    // Best-effort: never let an optional capability probe break tools/list. A
+    // transient OPC UA outage should still leave the core tools advertised.
+    try {
+      await this.ensureConnection();
+      const dataValue = await this.session!.readVariableValue("ns=0;i=11193"); // AccessHistoryDataCapability
+      return (
+        dataValue.statusCode === StatusCodes.Good &&
+        dataValue.value?.value === true
+      );
+    } catch (error) {
+      console.error("accessHistoryDataCapability probe failed:", error);
+      return false;
+    }
   }
 
   private async serverCapabilitiesAggregateFunctions(): Promise<string[]> {
-    await this.ensureConnection();
+    // Best-effort: any failure (incl. a connection error) yields no aggregate
+    // functions rather than breaking tools/list.
     let aggregateFunctions: string[] = [];
     try {
+      await this.ensureConnection();
       const browseResult = await this.session!.browse({
         nodeId: "ns=0;i=2997", // AggregateFunctions
         browseDirection: 0, // Forward
@@ -509,8 +518,18 @@ class OPCUAMCPServer {
       throw new Error("No OPC UA session available");
     }
 
+    // Don't depend on a prior tools/list having populated the cache: a client may
+    // call this tool directly after connecting. Recompute on demand if empty.
+    if (this.aggregateFunctions.length === 0) {
+      this.aggregateFunctions = await this.serverCapabilitiesAggregateFunctions();
+    }
+
     if (!this.aggregateFunctions.includes(aggregate_fn)) {
-      throw new Error("Invalid aggregate function");
+      throw new Error(
+        this.aggregateFunctions.length === 0
+          ? "Server does not advertise any aggregate functions"
+          : `Invalid aggregate function. Supported: ${this.aggregateFunctions.join(", ")}`,
+      );
     }
 
     try {

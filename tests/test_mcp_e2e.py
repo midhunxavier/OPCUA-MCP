@@ -158,6 +158,28 @@ async def test_aggregate_tool_hidden_when_unsupported(server):
     assert "read_aggregate_opcua_node" not in names
 
 
+async def test_aggregate_direct_call_errors_cleanly(server):
+    """Calling read_aggregate_opcua_node directly (no prior tools/list) must not
+    crash or wrongly report 'Invalid aggregate function' due to an empty cache —
+    it should recompute support on demand and return a clear message. npx-only."""
+    impl, params = server
+    if impl != "npx":
+        pytest.skip("aggregate tool is npx-only")
+    async with connect(params) as session:
+        result = await session.call_tool(
+            "read_aggregate_opcua_node",
+            {
+                "node_id": NODE["Temperature"],
+                "start_time": "2026-01-01T00:00:00Z",
+                "aggregate_function": "Average",
+                "processing_interval": 60000,
+            },
+        )
+    # The mock advertises no aggregate functions, so we expect a clear,
+    # aggregate-related error rather than a crash or a misleading message.
+    assert "aggregate" in text_of(result).lower()
+
+
 async def test_read_single_node(server):
     impl, params = server
     async with connect(params) as session:

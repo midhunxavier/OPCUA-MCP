@@ -1,10 +1,63 @@
-# OPC UA MCP Server
+<div align="center">
+
+# 🏭 OPC UA MCP Server
+
+**Read industrial sensors and control equipment on any OPC UA server — through natural language with Claude and any MCP client.**
+
+[![npm version](https://img.shields.io/npm/v/opcua-mcp-npx-server)](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[![npm downloads](https://img.shields.io/npm/dm/opcua-mcp-npx-server)](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[![CI](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/midhunxavier/OPCUA-MCP)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/midhunxavier/OPCUA-MCP?style=social)](https://github.com/midhunxavier/OPCUA-MCP)
+
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org)
+[![Node.js 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
+[![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+[Quick Start](#quick-start) · [Examples](EXAMPLES.md) · [Testing](TESTING.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-npx-server)
+
+</div>
 
 ![OPC UA MCP Server Screenshot](Media/ss.png)
 
 ## Overview
 
-Python and TypeScript implementations provide the same core functionality for OPC UA operations through MCP tools, but differ in their implementation approach and deployment model.
+Two interchangeable implementations — **Python** and **TypeScript/Node** — expose
+the same OPC UA operations as MCP tools. Both connect to any OPC UA server and let
+an AI assistant read nodes, write values, browse the address space, call methods,
+and read history. Pick whichever runtime fits your stack.
+
+```mermaid
+flowchart LR
+    A["AI client<br/>(Claude Desktop / Code / Cursor)"] -->|MCP over stdio| B["OPC UA MCP Server<br/>(Python or npx)"]
+    B -->|OPC UA| C["OPC UA Server<br/>(PLC / SCADA / mock)"]
+```
+
+## Quick Start
+
+The fastest path — the npx server, no clone required:
+
+```bash
+npx opcua-mcp-npx-server
+```
+
+Then point your MCP client at it (see [Configuration](#configuration)):
+
+```json
+{
+  "mcpServers": {
+    "opcua-npx": {
+      "command": "npx",
+      "args": ["opcua-mcp-npx-server"],
+      "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
+    }
+  }
+}
+```
+
+Prefer Python, or want the full install matrix? See
+[Deployment & Installation](#deployment--installation).
 
 
 ## Example Usage in Conversation

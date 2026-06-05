@@ -2,7 +2,7 @@
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
       }

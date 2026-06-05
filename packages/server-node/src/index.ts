@@ -52,7 +52,7 @@ class OPCUAMCPServer {
   constructor() {
     this.server = new Server(
       {
-        name: "opcua-mcp-npx-server",
+        name: "opcua-mcp-server",
         version: "0.1.2",
       },
       {

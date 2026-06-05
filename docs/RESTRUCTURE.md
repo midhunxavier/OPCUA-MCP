@@ -65,7 +65,7 @@ What stays duplicated (accepted): ~10 lines of per-tool logic per language.
 | 0 | Baseline & branch | ✅ done |
 | 1 | Folder reorg, behavior-neutral | ✅ done |
 | 2 | Python: uv workspace + real package | ✅ done |
-| 3 | npm rename across all leak points | ⬜ todo |
+| 3 | npm rename across all leak points | ✅ done |
 | 4 | Shared contract + parity test | ⬜ todo |
 | 5 | Docs consolidation | ⬜ todo |
 | 6 | Final validation & PR | ⬜ todo |

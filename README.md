@@ -4,8 +4,8 @@
 
 **Read industrial sensors and control equipment on any OPC UA server — through natural language with Claude and any MCP client.**
 
-[![npm version](https://img.shields.io/npm/v/opcua-mcp-npx-server)](https://www.npmjs.com/package/opcua-mcp-npx-server)
-[![npm downloads](https://img.shields.io/npm/dm/opcua-mcp-npx-server)](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[![npm version](https://img.shields.io/npm/v/opcua-mcp-server)](https://www.npmjs.com/package/opcua-mcp-server)
+[![npm downloads](https://img.shields.io/npm/dm/opcua-mcp-server)](https://www.npmjs.com/package/opcua-mcp-server)
 [![CI](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/midhunxavier/OPCUA-MCP)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/midhunxavier/OPCUA-MCP?style=social)](https://github.com/midhunxavier/OPCUA-MCP)
@@ -15,7 +15,7 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
 
 </div>
 
@@ -39,7 +39,7 @@ flowchart LR
 The fastest path — the npx server, no clone required:
 
 ```bash
-npx opcua-mcp-npx-server
+npx opcua-mcp-server
 ```
 
 Then point your MCP client at it (see [Configuration](#configuration)):
@@ -49,7 +49,7 @@ Then point your MCP client at it (see [Configuration](#configuration)):
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
     }
   }
@@ -127,7 +127,7 @@ Result: "Found 15 variables:
 - **Transport**: STDIO
 - **Entry Point**: `opcua_mcp_server.py` (console script: `opcua-mcp-server`)
 
-### NPX Version (`opcua-mcp-npx-server`)
+### Node Version (`opcua-mcp-server`)
 - **Language**: TypeScript/Node.js
 - **Framework**: @modelcontextprotocol/sdk
 - **OPC UA Library**: `node-opcua`
@@ -202,11 +202,11 @@ uv run --no-sync opcua-mcp-server
 ### NPX Version
 ```bash
 # Direct usage (recommended)
-npx opcua-mcp-npx-server
+npx opcua-mcp-server
 
 # Global installation
-npm install -g opcua-mcp-npx-server
-opcua-mcp-npx-server
+npm install -g opcua-mcp-server
+opcua-mcp-server
 
 # Development
 npm install
@@ -214,7 +214,7 @@ npm run build
 npm start
 ```
 
-**NPM Package**: https://www.npmjs.com/package/opcua-mcp-npx-server
+**NPM Package**: https://www.npmjs.com/package/opcua-mcp-server
 
 ## Configuration
 
@@ -247,7 +247,7 @@ Both versions use the same environment variable:
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
       }

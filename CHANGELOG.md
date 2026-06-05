@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Renamed the npm package `opcua-mcp-npx-server` → `opcua-mcp-server` (the old
+  name will be deprecated on npm with a pointer to the new one).
+- Restructured the repository into a `packages/` monorepo layout with a single
+  uv workspace.
+
 ### Added
 - `read_history_opcua_node` tool — read historical (timestamped) values for a node.
 - `read_aggregate_opcua_node` tool — server-side aggregate reads, exposed only
@@ -22,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.2] — npx server
 
-Initial published versions of `opcua-mcp-npx-server` on npm with the seven core
+Initial published versions of `opcua-mcp-server` on npm with the seven core
 OPC UA tools (read, write, browse, read/write multiple, call method, get all
 variables).
 

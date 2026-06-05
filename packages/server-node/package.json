@@ -1,11 +1,12 @@
 {
-  "name": "opcua-mcp-npx-server",
+  "name": "opcua-mcp-server",
   "version": "0.1.2",
   "description": "NPX-based MCP server for OPC UA control - Model Context Protocol server for OPC UA operations",
-  "main": "src/index.js",
+  "main": "build/index.js",
   "type": "module",
   "bin": {
-    "opcua-mcp-npx-server": "./build/index.js"
+    "opcua-mcp-server": "./build/index.js",
+    "opcua-mcp": "./build/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -21,8 +22,7 @@
     "opc-ua",
     "industrial",
     "automation",
-    "scada",
-    "npx"
+    "scada"
   ],
   "author": "Midhun Xavier",
   "license": "MIT",

@@ -22,14 +22,14 @@ An NPX-based Model Context Protocol (MCP) server for OPC UA operations. This ser
 You can run the server directly using NPX without installing it globally:
 
 ```bash
-npx opcua-mcp-npx-server
+npx opcua-mcp-server
 ```
 
 ### Global Installation
 
 ```bash
-npm install -g opcua-mcp-npx-server
-opcua-mcp-npx-server
+npm install -g opcua-mcp-server
+opcua-mcp-server
 ```
 
 ### Local Development
@@ -50,7 +50,7 @@ The server connects to an OPC UA server using the following environment variable
 
 Example:
 ```bash
-OPCUA_SERVER_URL=opc.tcp://192.168.1.100:4840 npx opcua-mcp-npx-server
+OPCUA_SERVER_URL=opc.tcp://192.168.1.100:4840 npx opcua-mcp-server
 ```
 
 ## MCP Tools
@@ -221,7 +221,7 @@ Add to your Cursor settings:
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
       }
@@ -239,7 +239,7 @@ Add to your Claude Desktop configuration file:
   "mcpServers": {
     "opcua-npx": {
       "command": "npx",
-      "args": ["opcua-mcp-npx-server"],
+      "args": ["opcua-mcp-server"],
       "env": {
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
       }

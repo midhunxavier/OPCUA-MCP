@@ -15,7 +15,7 @@ parameters, and return value.
 
 **Should it apply to both servers?**
 - [ ] Python (`opcua-mcp-server`)
-- [ ] npx / TypeScript (`opcua-mcp-npx-server`)
+- [ ] npx / TypeScript (`opcua-mcp-server`)
 
 **Alternatives considered**
 Any alternative approaches you thought about.

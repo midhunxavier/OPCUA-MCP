@@ -25,7 +25,7 @@ that account can.
 ## Supported versions
 
 This project is pre-1.0. Security fixes land on `main` and the latest published
-npm release of `opcua-mcp-npx-server`.
+npm release of `opcua-mcp-server`.
 
 ## Reporting a vulnerability
 

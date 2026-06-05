@@ -192,42 +192,49 @@ class IndustrialControlSystem:
     def _create_control_methods(self, parent_folder: Node):
         """Create OPC UA methods for system control."""
         
-        # Start production method
+        # Start production method (input: rate Double, output: Boolean)
         start_method = parent_folder.add_method(
-            2, "StartProduction", self.start_production_callback
+            2, "StartProduction", self.start_production_callback,
+            [ua.VariantType.Double], [ua.VariantType.Boolean]
         )
-        
-        # Stop production method
+
+        # Stop production method (output: Boolean)
         stop_method = parent_folder.add_method(
-            2, "StopProduction", self.stop_production_callback
+            2, "StopProduction", self.stop_production_callback,
+            [], [ua.VariantType.Boolean]
         )
-        
-        # Emergency stop method
+
+        # Emergency stop method (output: Boolean)
         emergency_method = parent_folder.add_method(
-            2, "EmergencyStop", self.emergency_stop_callback
+            2, "EmergencyStop", self.emergency_stop_callback,
+            [], [ua.VariantType.Boolean]
         )
-        
-        # Reset system method
+
+        # Reset system method (output: Boolean)
         reset_method = parent_folder.add_method(
-            2, "ResetSystem", self.reset_system_callback
+            2, "ResetSystem", self.reset_system_callback,
+            [], [ua.VariantType.Boolean]
         )
-        
-        # Calibrate sensors method
+
+        # Calibrate sensors method (input: sensor name String, output: Boolean)
         calibrate_method = parent_folder.add_method(
-            2, "CalibrateSensors", self.calibrate_sensors_callback
+            2, "CalibrateSensors", self.calibrate_sensors_callback,
+            [ua.VariantType.String], [ua.VariantType.Boolean]
         )
     
-    # Method callbacks
+    # Method callbacks.
+    # OPC UA passes inputs as ua.Variant objects (use .Value) and expects
+    # the callback to return a list of ua.Variant output values.
     def start_production_callback(self, parent, *args):
         """Start production with specified rate."""
-        rate = float(args[0]) if args else 10.0
+        rate = float(args[0].Value) if args else 10.0
         logging.info(f"Starting production with rate: {rate}")
         self.system_state['production_rate'] = rate
         self.system_state['system_mode'] = 'AUTO'
         self.system_state['pump_enabled'] = True
         self.system_state['conveyor_speed'] = min(rate * 2, 100.0)  # Scale speed with rate
-        return True
-    
+        return [ua.Variant(True, ua.VariantType.Boolean)]
+
     def stop_production_callback(self, parent, *args):
         """Stop production."""
         logging.info("Stopping production")
@@ -235,8 +242,8 @@ class IndustrialControlSystem:
         self.system_state['system_mode'] = 'MANUAL'
         self.system_state['pump_enabled'] = False
         self.system_state['conveyor_speed'] = 0.0
-        return True
-    
+        return [ua.Variant(True, ua.VariantType.Boolean)]
+
     def emergency_stop_callback(self, parent, *args):
         """Trigger emergency stop."""
         logging.warning("EMERGENCY STOP TRIGGERED!")
@@ -248,8 +255,8 @@ class IndustrialControlSystem:
         self.system_state['heater_power'] = 0.0
         self.system_state['fan_speed'] = 0.0
         self.system_state['alarm_active'] = True
-        return True
-    
+        return [ua.Variant(True, ua.VariantType.Boolean)]
+
     def reset_system_callback(self, parent, *args):
         """Reset system to initial state."""
         logging.info("Resetting system")
@@ -257,17 +264,17 @@ class IndustrialControlSystem:
         self.system_state['system_mode'] = 'MANUAL'
         self.system_state['alarm_active'] = False
         self.system_state['total_production'] = 0.0
-        return True
-    
+        return [ua.Variant(True, ua.VariantType.Boolean)]
+
     def calibrate_sensors_callback(self, parent, *args):
         """Calibrate specified sensor."""
-        sensor_name = str(args[0]) if args else "unknown"
+        sensor_name = str(args[0].Value) if args else "unknown"
         logging.info(f"Calibrating sensor: {sensor_name}")
         # Simulate calibration by adding small random offset
         if sensor_name in self.system_state:
             # Add some calibration effect
             pass
-        return True
+        return [ua.Variant(True, ua.VariantType.Boolean)]
     
     def simulate_process(self):
         """Simulate industrial process behavior."""

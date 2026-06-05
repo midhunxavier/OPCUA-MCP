@@ -328,17 +328,19 @@ class OPCUAMCPServer {
       
       let convertedValue: any;
       const currentValue = currentDataValue.value?.value;
-      
+      // Coerce to string first: a client may send a non-string (e.g. boolean/number) value.
+      const valueStr = String(value);
+
       // Convert value based on the current type
       if (typeof currentValue === 'number') {
-        convertedValue = parseFloat(value);
+        convertedValue = parseFloat(valueStr);
         if (isNaN(convertedValue)) {
-          throw new Error(`Cannot convert "${value}" to number`);
+          throw new Error(`Cannot convert "${valueStr}" to number`);
         }
       } else if (typeof currentValue === 'boolean') {
-        convertedValue = value.toLowerCase() === 'true' || value === '1';
+        convertedValue = valueStr.toLowerCase() === 'true' || valueStr === '1';
       } else {
-        convertedValue = value; // Keep as string
+        convertedValue = valueStr; // Keep as string
       }
 
       const nodeToWrite = {
@@ -455,17 +457,19 @@ class OPCUAMCPServer {
         const currentValue = currentDataValue.value?.value;
         
         let convertedValue: any;
-        
+        // Coerce to string first: a client may send a non-string (e.g. boolean/number) value.
+        const valueStr = String(item.value);
+
         // Convert value based on the current type
         if (typeof currentValue === 'number') {
-          convertedValue = parseFloat(item.value);
+          convertedValue = parseFloat(valueStr);
           if (isNaN(convertedValue)) {
-            throw new Error(`Cannot convert "${item.value}" to number for node ${item.node_id}`);
+            throw new Error(`Cannot convert "${valueStr}" to number for node ${item.node_id}`);
           }
         } else if (typeof currentValue === 'boolean') {
-          convertedValue = item.value.toLowerCase() === 'true' || item.value === '1';
+          convertedValue = valueStr.toLowerCase() === 'true' || valueStr === '1';
         } else {
-          convertedValue = item.value; // Keep as string
+          convertedValue = valueStr; // Keep as string
         }
 
         return {

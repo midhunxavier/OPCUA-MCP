@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 import asyncio
 import os
+import sys
 from typing import List, Dict, Any
 from opcua import ua
 from opcua.ua import NodeClass
@@ -18,12 +19,13 @@ async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     try:
         # Connect to OPC UA server synchronously, wrapped in a thread for async compatibility
         await asyncio.to_thread(client.connect)
-        print("Connected to OPC UA server")
+        # Log to stderr: stdout is reserved for the MCP stdio JSON-RPC transport.
+        print("Connected to OPC UA server", file=sys.stderr)
         yield {"opcua_client": client}
     finally:
         # Disconnect from OPC UA server on shutdown
         await asyncio.to_thread(client.disconnect)
-        print("Disconnected from OPC UA server")
+        print("Disconnected from OPC UA server", file=sys.stderr)
 
 # Create an MCP server instance
 mcp = FastMCP("OPCUA-Control", lifespan=opcua_lifespan)
@@ -63,9 +65,12 @@ def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
     client = ctx.request_context.lifespan_context["opcua_client"]
     node = client.get_node(node_id)
     try:
-        # Convert value based on the node's current type
+        # Convert value based on the node's current type.
+        # Note: check bool before (int, float) because bool is a subclass of int.
         current_value = node.get_value()
-        if isinstance(current_value, (int, float)):
+        if isinstance(current_value, bool):
+            node.set_value(str(value).lower() in ['true', '1', 'yes', 'on'])
+        elif isinstance(current_value, (int, float)):
             node.set_value(float(value))
         else:
             node.set_value(value)
@@ -134,7 +139,8 @@ def call_opcua_method(object_node_id: str, method_node_id: str, ctx: Context, ar
     try:
         # Get the object and method nodes
         object_node = client.get_node(object_node_id)
-        
+        method_node = client.get_node(method_node_id)
+
         # Prepare arguments
         method_args = []
         if arguments:
@@ -155,9 +161,11 @@ def call_opcua_method(object_node_id: str, method_node_id: str, ctx: Context, ar
                 else:
                     method_args.append(arg)
         
-        # Call the method
-        result = client.call_method(object_node_id, method_node_id, *method_args)
-        
+        # Call the method on the object node. python-opcua exposes call_method on Node
+        # (not Client), and a string methodid is treated as a child browse-name, so pass
+        # the resolved method Node to call it by node id.
+        result = object_node.call_method(method_node, *method_args)
+
         return f"Method call successful. Object: {object_node_id}, Method: {method_node_id}, Result: {result}"
         
     except Exception as e:
@@ -218,12 +226,13 @@ def write_multiple_opcua_nodes(nodes_to_write: List[Dict[str, Any]], ctx: Contex
             try:
                 node = client.get_node(node_id)
                 
-                # Convert value based on the node's current type
+                # Convert value based on the node's current type.
+                # Note: check bool before (int, float) because bool is a subclass of int.
                 current_value = node.get_value()
-                if isinstance(current_value, (int, float)):
-                    converted_value = float(value)
-                elif isinstance(current_value, bool):
+                if isinstance(current_value, bool):
                     converted_value = str(value).lower() in ['true', '1', 'yes', 'on']
+                elif isinstance(current_value, (int, float)):
+                    converted_value = float(value)
                 else:
                     converted_value = str(value)
                 

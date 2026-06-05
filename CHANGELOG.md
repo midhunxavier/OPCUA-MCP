@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Boolean and value handling across the server and clients.
 - OPC UA method calls.
+- Python `read_history_opcua_node` now takes `start_time`/`end_time` as ISO-8601
+  strings and rejects malformed input with the same message as the npx server
+  (`Invalid date/time: … Use ISO 8601, e.g. 2026-04-23T17:40:00Z`).
+- The shared tool contract is now bundled inside the Python wheel, so a
+  pip/uvx-installed `opcua-mcp-server` no longer fails on import with
+  `FileNotFoundError` when run outside the repo layout.
 
 ## [0.1.2] — npx server
 

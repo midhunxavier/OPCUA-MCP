@@ -20,3 +20,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 only-include = ["opcua_mcp_server.py"]
+
+# Bundle the shared tool contract next to the module so a pip/uvx-installed wheel
+# is self-contained (the canonical source lives at the repo root /contract). The
+# namespaced filename avoids colliding with other distributions at the install root.
+[tool.hatch.build.targets.wheel.force-include]
+"../../contract/tools.json" = "opcua_mcp_server_contract.json"

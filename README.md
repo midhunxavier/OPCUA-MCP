@@ -221,6 +221,26 @@ Both versions use the same environment variable:
 - `@types/node`: Node.js type definitions
 
 
+## Testing
+
+There are three ways to exercise the servers — the automated suite, the MCP
+Inspector (UI or CLI), and an AI agent (Claude Code / Desktop / Cursor). Start the
+mock server first, then:
+
+```bash
+cd tests && uv run pytest -v        # end-to-end suite, both servers
+```
+
+See **[TESTING.md](TESTING.md)** for the full guide (Inspector walkthrough, AI-agent
+setup, example prompts, troubleshooting) and **[EXAMPLES.md](EXAMPLES.md)** for
+per-tool inputs/outputs and a node-ID reference.
+
+## Contributing
+
+Contributions are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for project
+layout, local development, adding a new tool to both servers, and PR conventions.
+
+
 ## Security
 
 Both versions currently connect with:

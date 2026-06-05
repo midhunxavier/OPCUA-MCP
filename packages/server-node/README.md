@@ -36,7 +36,7 @@ opcua-mcp-npx-server
 
 ```bash
 git clone <repository>
-cd opcua-mcp-npx-server
+cd packages/server-node
 npm install
 npm run build
 npm start

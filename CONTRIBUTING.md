@@ -4,18 +4,18 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 (Python and TypeScript/npx) that bridge AI assistants to OPC UA servers, plus a
 **mock industrial OPC UA server** for local development and testing.
 
-- **[TESTING.md](TESTING.md)** — how to test (automated suite, MCP Inspector, AI agents)
-- **[EXAMPLES.md](EXAMPLES.md)** — per-tool inputs/outputs and node-ID reference
+- **[docs/testing.md](docs/testing.md)** — how to test (automated suite, MCP Inspector, AI agents)
+- **[docs/examples.md](docs/examples.md)** — per-tool inputs/outputs and node-ID reference
 
 ## Repository layout
 
 | Path | What it is |
 |------|------------|
-| `opcua-local-server/` | Mock "Industrial Control System" OPC UA server (the simulated PLC/sensors) |
-| `opcua-mcp-server/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa) |
-| `opcua-mcp-npx-server/` | **npx** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
+| `packages/mock-server/` | Mock "Industrial Control System" OPC UA server (the simulated PLC/sensors) |
+| `packages/server-python/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa) |
+| `packages/server-node/` | **npx** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
 | `tests/` | End-to-end pytest suite driving both servers via the `mcp` SDK |
-| `EXAMPLES.md`, `TESTING.md` | Usage and testing docs |
+| `docs/` | Usage and testing docs (`examples.md`, `testing.md`) |
 
 ```
 AI assistant / MCP client  ──stdio──►  MCP server (Python OR npx)  ──OPC UA/TCP──►  mock server :4840
@@ -35,20 +35,20 @@ should be added to the other with the **same name and arguments**.
 Start the mock server first (it's the data source for everything else):
 
 ```bash
-cd opcua-local-server && uv run main.py
+cd packages/mock-server && uv run main.py
 # listens on opc.tcp://0.0.0.0:4840/freeopcua/server/  (history enabled)
 ```
 
 ### Python MCP server
 ```bash
-cd opcua-mcp-server
+cd packages/server-python
 uv sync
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run opcua-mcp-server.py
 ```
 
 ### npx MCP server
 ```bash
-cd opcua-mcp-npx-server
+cd packages/server-node
 npm install
 npm run build        # compiles src/index.ts -> build/index.js
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ node build/index.js
@@ -66,16 +66,16 @@ cd tests && uv run pytest -v        # 22 tests, both servers
 
 See [tests/README.md](tests/README.md) for details and selectors
 (`-k python` / `-k npx`). For manual testing with the MCP Inspector or an AI
-agent, see **[TESTING.md](TESTING.md)**.
+agent, see **[docs/testing.md](docs/testing.md)**.
 
 ## Adding a new MCP tool
 
 Keep the two servers in sync. To add a tool `foo`:
 
-1. **Python** (`opcua-mcp-server/opcua-mcp-server.py`): add a function decorated
+1. **Python** (`packages/server-python/opcua-mcp-server.py`): add a function decorated
    with `@mcp.tool()`, typed args, a docstring, and `ctx: Context` to reach the
    OPC UA client. Return a `str` or JSON-serialisable value.
-2. **npx** (`opcua-mcp-npx-server/src/index.ts`): add the tool to the
+2. **npx** (`packages/server-node/src/index.ts`): add the tool to the
    `ListToolsRequestSchema` handler (`name`, `description`, `inputSchema`), add a
    `case` to the `CallToolRequestSchema` switch, and implement a private method.
    Run `npm run build`.
@@ -87,7 +87,7 @@ Keep the two servers in sync. To add a tool `foo`:
    `ns=0;i=2997`).
 5. **Add an end-to-end test** in `tests/test_mcp_e2e.py` (it runs against both
    servers automatically).
-6. **Document it** in the server READMEs and `EXAMPLES.md`.
+6. **Document it** in the server READMEs and `docs/examples.md`.
 
 ## Code style
 

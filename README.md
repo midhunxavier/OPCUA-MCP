@@ -15,7 +15,7 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#quick-start) · [Examples](EXAMPLES.md) · [Testing](TESTING.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-npx-server)
+[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-npx-server)
 
 </div>
 
@@ -193,7 +193,7 @@ Result: "Found 15 variables:
 ### Python Version
 ```bash
 # Installation
-cd opcua-mcp-server
+cd packages/server-python
 uv install  # or pip install
 
 # Usage
@@ -232,7 +232,7 @@ Both versions use the same environment variable:
       "command": "/Users/mx/.local/bin/uv",
       "args": [
         "--directory",
-        "/path/to/opcua-mcp-server",
+        "/path/to/packages/server-python",
         "run",
         "opcua-mcp-server.py"
       ],
@@ -284,8 +284,8 @@ mock server first, then:
 cd tests && uv run pytest -v        # end-to-end suite, both servers
 ```
 
-See **[TESTING.md](TESTING.md)** for the full guide (Inspector walkthrough, AI-agent
-setup, example prompts, troubleshooting) and **[EXAMPLES.md](EXAMPLES.md)** for
+See **[docs/testing.md](docs/testing.md)** for the full guide (Inspector walkthrough, AI-agent
+setup, example prompts, troubleshooting) and **[docs/examples.md](docs/examples.md)** for
 per-tool inputs/outputs and a node-ID reference.
 
 ## Contributing

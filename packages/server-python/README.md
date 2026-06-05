@@ -44,7 +44,7 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 
 1. **Clone or download the project:**
    ```bash
-   cd opcua-mcp-server
+   cd packages/server-python
    ```
 
 2. **Install dependencies using UV:**
@@ -87,7 +87,7 @@ Add to your MCP client configuration (e.g., `config.json`):
       "command": "/path/to/uv",
       "args": [
         "--directory",
-        "/path/to/opcua-mcp-server",
+        "/path/to/packages/server-python",
         "run",
         "opcua-mcp-server.py"
       ],

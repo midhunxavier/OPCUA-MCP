@@ -28,7 +28,7 @@ jobs:
           node-version: "20"
 
       - name: Build npx server
-        working-directory: opcua-mcp-npx-server
+        working-directory: packages/server-node
         run: |
           npm ci
           npm run build

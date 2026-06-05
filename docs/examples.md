@@ -8,13 +8,13 @@ Outputs below are real (abbreviated) responses captured end-to-end.
 
 ```bash
 # 1) Start the mock OPC UA server (the simulated PLC/sensors)
-cd opcua-local-server && uv run main.py        # listens on opc.tcp://localhost:4840/freeopcua/server/
+cd packages/mock-server && uv run main.py        # listens on opc.tcp://localhost:4840/freeopcua/server/
 
 # 2a) Python MCP server
-cd opcua-mcp-server && OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run opcua-mcp-server.py
+cd packages/server-python && OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run opcua-mcp-server.py
 
 # 2b) npx MCP server
-cd opcua-mcp-npx-server && npm install && npm run build
+cd packages/server-node && npm install && npm run build
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ node build/index.js
 ```
 
@@ -183,5 +183,5 @@ functions** — the bundled mock does not, so this tool is not exposed against i
 ## Tip
 
 You don't call these tools by hand in normal use — you ask Claude. The JSON above
-is what Claude sends under the hood. See `tests/` for an automated suite that
+is what Claude sends under the hood. See `../tests/` for an automated suite that
 exercises every tool against both servers.

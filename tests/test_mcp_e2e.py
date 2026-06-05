@@ -59,7 +59,7 @@ HISTORY_TOOL = {
     "npx": "read_history_opcua_node",
 }
 
-NPX_BUILD = ROOT / "opcua-mcp-npx-server" / "build" / "index.js"
+NPX_BUILD = ROOT / "packages" / "server-node" / "build" / "index.js"
 
 
 def _server_params(impl: str, url: str) -> StdioServerParameters:
@@ -67,7 +67,7 @@ def _server_params(impl: str, url: str) -> StdioServerParameters:
     if impl == "python":
         return StdioServerParameters(
             command="uv",
-            args=["--directory", str(ROOT / "opcua-mcp-server"), "run", "opcua-mcp-server.py"],
+            args=["--directory", str(ROOT / "packages" / "server-python"), "run", "opcua-mcp-server.py"],
             env=env,
         )
     if impl == "npx":
@@ -85,7 +85,7 @@ def server(request, opcua_server):
     """
     impl = request.param
     if impl == "npx" and not NPX_BUILD.exists():
-        pytest.skip("npx server not built — run `npm install && npm run build` in opcua-mcp-npx-server")
+        pytest.skip("npx server not built — run `npm install && npm run build` in packages/server-node")
     return impl, _server_params(impl, opcua_server)
 
 

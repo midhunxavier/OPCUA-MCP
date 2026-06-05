@@ -26,7 +26,7 @@ and only when the server advertises `AccessHistoryDataCapability`.
 ## Prerequisites
 
 - `uv`, `node` (>=18), `npm`
-- Build the npx server once: `cd opcua-mcp-npx-server && npm install && npm run build`
+- Build the npx server once: `cd packages/server-node && npm install && npm run build`
   (npx tests are **skipped** if `build/index.js` is missing).
 
 ## Running

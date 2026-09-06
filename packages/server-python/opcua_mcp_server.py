@@ -45,6 +45,7 @@ def _load_contract() -> dict:
 _CONTRACT = _load_contract()
 _DESC = {t["name"]: t["description"] for t in _CONTRACT["tools"]}
 _HISTORY_NODE_ID = _CONTRACT["capabilities"]["history"]["nodeId"]
+_AGGREGATE_NODE_ID = _CONTRACT["capabilities"]["aggregate"]["nodeId"]
 
 # Manage the lifecycle of the OPC UA client connection
 @asynccontextmanager
@@ -160,6 +161,91 @@ def _server_supports_history(url: str) -> bool:
 # Conditionally register the history tool based on server capability.
 if _server_supports_history(server_url):
     read_history_opcua_node = mcp.tool(description=_DESC["read_history_opcua_node"])(read_history_opcua_node)
+
+
+def _server_aggregate_functions(url: str) -> dict[str, ua.NodeId]:
+    """Probe the server's advertised aggregate functions."""
+    try:
+        probe = Client(url)
+        probe.connect()
+        try:
+            aggregate_node = probe.get_node(_AGGREGATE_NODE_ID)
+            aggregate_definitions = {
+                name.removeprefix("AggregateFunction_"): ua.NodeId(identifier, 0)
+                for name, identifier in vars(ua.ObjectIds).items()
+                if name.startswith("AggregateFunction_")
+            }
+            aggregate_functions = {}
+            for child in aggregate_node.get_referenced_nodes(
+                refs=ua.ObjectIds.References,
+                direction=ua.BrowseDirection.Forward,
+            ):
+                try:
+                    browse_name = child.get_browse_name().Name
+                    if (
+                        browse_name in aggregate_definitions
+                        and child.nodeid == aggregate_definitions[browse_name]
+                    ):
+                        aggregate_functions[browse_name] = child.nodeid
+                except Exception:
+                    continue
+            return aggregate_functions
+        finally:
+            probe.disconnect()
+    except Exception:
+        return {}
+
+
+def _server_supports_aggregate(url: str) -> bool:
+    """Probe whether the server advertises aggregate functions."""
+    return bool(_server_aggregate_functions(url))
+
+
+# Conditionally register the aggregate tool based on server capability.
+def read_aggregate_opcua_node(node_id: str,
+                              ctx: Context,
+                              start_time: str,
+                              aggregate_function: str,
+                              end_time: str | None = None,
+                              processing_interval: float = 0) -> list[dict]:
+    """Read processed historical values of a specific OPC UA node."""
+    aggregate_functions = _server_aggregate_functions(server_url)
+    if not aggregate_functions:
+        raise ValueError("Server does not advertise any aggregate functions")
+    if aggregate_function not in aggregate_functions:
+        raise ValueError(
+            "Invalid aggregate function. Supported: "
+            + ", ".join(aggregate_functions)
+        )
+
+    client = ctx.request_context.lifespan_context["opcua_client"]
+    try:
+        details = ua.ReadProcessedDetails()
+        details.StartTime = _parse_iso_datetime(start_time)
+        details.EndTime = _parse_iso_datetime(end_time) or datetime.now()
+        details.ProcessingInterval = processing_interval
+        details.AggregateType = [aggregate_functions[aggregate_function]]
+
+        result = client.get_node(node_id).history_read(details)
+        if not result.StatusCode.is_good():
+            raise ValueError(f"Read aggregate failed with status: {result.StatusCode}")
+
+        return [
+            {
+                "value": str(v.Value.Value),
+                "timestamp": str(v.SourceTimestamp),
+                "status": str(v.StatusCode.name),
+            }
+            for v in result.HistoryData.DataValues
+        ]
+    except Exception as e:
+        raise ValueError(f"Failed to read node {node_id}: {str(e)}")
+
+
+if _server_supports_aggregate(server_url):
+    read_aggregate_opcua_node = mcp.tool(
+        description=_DESC["read_aggregate_opcua_node"]
+    )(read_aggregate_opcua_node)
 
 
 # Tool: Write a value to an OPC UA node

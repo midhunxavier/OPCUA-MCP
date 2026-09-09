@@ -150,8 +150,11 @@ async def test_history_tool_exposed_when_supported(server):
 
 
 async def test_aggregate_tool_hidden_when_unsupported(server):
-    """The mock server advertises no aggregate functions, so the npx aggregate
-    tool must NOT be exposed (capability gating)."""
+    """The mock server advertises no aggregate functions, so neither server may
+    expose the aggregate tool (capability gating).
+
+    The positive cases live in ``test_aggregate_e2e.py``, which runs against the
+    aggregate-capable mock on :4841."""
     impl, params = server
     async with connect(params) as session:
         names = await tool_names(session)
@@ -161,10 +164,17 @@ async def test_aggregate_tool_hidden_when_unsupported(server):
 async def test_aggregate_direct_call_errors_cleanly(server):
     """Calling read_aggregate_opcua_node directly (no prior tools/list) must not
     crash or wrongly report 'Invalid aggregate function' due to an empty cache —
-    it should recompute support on demand and return a clear message. npx-only."""
+    it should recompute support on demand and return a clear message.
+
+    npx-only by construction. The Python server gates at import time, so against
+    a server without aggregate support the tool is never registered and a direct
+    call returns "Unknown tool" instead. That is a correct MCP response for an
+    unadvertised tool, and the empty-cache failure mode this guards against
+    cannot arise there: the Python server re-probes on every call and holds no
+    cache to be stale."""
     impl, params = server
     if impl != "npx":
-        pytest.skip("aggregate tool is npx-only")
+        pytest.skip("npx-only: the Python server does not register the tool at all here")
     async with connect(params) as session:
         result = await session.call_tool(
             "read_aggregate_opcua_node",

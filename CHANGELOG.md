@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- Lint, format and typecheck gates: ruff for Python, Prettier + `tsc --noEmit`
+  for TypeScript, wired into a fast `lint` CI job that runs alongside the
+  end-to-end suite. Plus `.editorconfig`, Dependabot, `CODEOWNERS` and an issue
+  template chooser.
 - `read_history_opcua_node` tool — read historical (timestamped) values for a node.
 - `read_aggregate_opcua_node` tool — server-side aggregate reads, exposed only
   when the server advertises aggregate function support (capability gating).

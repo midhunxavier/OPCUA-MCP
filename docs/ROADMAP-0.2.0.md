@@ -42,13 +42,13 @@ ends with a green test suite — the same working style as
 | 1 | Terminology: npx → Node | low | ✅ done |
 | 2 | Version single-sourcing | low | ✅ done |
 | — | Name-claim pre-release (optional) | irreversible | ⏸ awaiting decision |
-| 3 | Quality gates (ruff / prettier / tsc) | low, noisy diff | ☐ |
+| 3 | Quality gates (ruff / prettier / tsc) | low, noisy diff | ✅ done |
 | 4 | Unit-test layer | low | ☐ |
 | 5 | Packaging correctness + module split | **high** | ☐ |
 | 6 | Python floor + CI matrix | medium | ☐ |
 | 7 | Aggregate parity in Python | medium | ☐ |
 | 8 | Docs consolidation | low | ☐ |
-| 9 | Repo furniture | low | ☐ |
+| 9 | Repo furniture | low | ✅ done |
 | 10 | 0.2.0 release + publish | **irreversible** | ☐ |
 
 ### Phase 1 — Terminology: "npx" → "Node"

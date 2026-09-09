@@ -80,12 +80,27 @@ The tool surface is defined once in [`contract/tools.json`](contract/tools.json)
 
 ## Code style
 
-- **Python**: follow the surrounding style; type-hint tool signatures (FastMCP
-  derives the schema from them). Avoid `print()` to `stdout` — use
-  `print(..., file=sys.stderr)`.
-- **TypeScript**: `npm run build` must pass (`tsc`). Don't write to `stdout`
-  except via the MCP transport; the server already routes stray `console.log` to
-  `stderr`.
+Style is enforced by tooling, not by review. CI runs all of the below in a
+`lint` job; run them locally before pushing:
+
+```bash
+uv run ruff check .            # Python lint  (--fix to autofix)
+uv run ruff format .           # Python format
+cd packages/server-node
+npm run format:check           # Prettier     (npm run format to autofix)
+npm run typecheck              # tsc --noEmit
+```
+
+Beyond what the tools check:
+
+- **Python**: type-hint tool signatures — FastMCP derives the input schema from
+  them, so a wrong annotation is a wire-protocol bug, not a style nit.
+- **Never write to `stdout`** except via the MCP transport; stdout carries the
+  JSON-RPC stream and stray output corrupts it. Use `print(..., file=sys.stderr)`
+  in Python; the Node server already redirects stray `console.log` to `stderr`.
+- Broad `except Exception` in a tool handler is intentional and allowed — return
+  a readable error to the model rather than tearing down the transport. (This is
+  why the `BLE` ruleset is not enabled.)
 - Convert/validate inputs explicitly (e.g. date strings → `Date`) and return
   clear error messages.
 

@@ -76,9 +76,17 @@ jobs:
           npm ci
           npm run build
 
+      # Idempotent: a partial release (one registry succeeding, the other failing)
+      # must be safe to re-run without a version bump.
       - name: Publish
         working-directory: packages/server-node
-        run: npm publish --provenance --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "opcua-mcp-server@$VERSION" version >/dev/null 2>&1; then
+            echo "opcua-mcp-server@$VERSION already on npm — skipping."
+            exit 0
+          fi
+          npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -99,3 +107,6 @@ jobs:
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Same reason as the npm job: re-running a partial release must not fail.
+          skip-existing: true

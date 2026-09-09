@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-09-09
+
+Completes the 0.2.0 release. **0.2.0 reached npm only** — the PyPI job failed to
+build, so this is the first version published to both registries.
+
+### Fixed
+- **The Python sdist could not build a wheel.** The shared tool contract was
+  force-included from `../../contract/tools.json`, a path that exists in a
+  checkout but can never exist inside an sdist. `uv build` (and `pip install`
+  from an sdist) builds the wheel *from the sdist*, so it failed with
+  `FileNotFoundError: Forced include not found`. The sdist now carries its own
+  copy of the contract and a build hook injects it into the wheel from whichever
+  location is present.
+
+  The artifact smoke tests missed this because they built with `uv build --wheel`,
+  straight from the source tree, never exercising the sdist path. They now build
+  both and additionally unpack the sdist outside the repo and build a wheel from
+  it alone.
+- Both publish jobs are now idempotent (`skip-existing` on PyPI, a version check
+  on npm), so a partial release like 0.2.0's is safe to re-run.
+
+
 ## [0.2.0] — 2026-09-09
 
 First release published as **`opcua-mcp-server`**. The previously published
@@ -126,6 +148,7 @@ with the seven core OPC UA tools (read, write, browse, read/write multiple, call
 method, get all variables). This is the only name published to date; the rename
 to `opcua-mcp-server` ships with the next release.
 
-[Unreleased]: https://github.com/midhunxavier/OPCUA-MCP/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/midhunxavier/OPCUA-MCP/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/midhunxavier/OPCUA-MCP/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/midhunxavier/OPCUA-MCP/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/midhunxavier/OPCUA-MCP/releases/tag/v0.1.2

@@ -28,6 +28,8 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
+import zipfile
 
 import pytest
 from conftest import ROOT
@@ -35,6 +37,9 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 pytestmark = pytest.mark.smoke
+
+# Populated by the wheel_venv fixture so the sdist test can reuse the build.
+_DIST_DIRS: list = []
 
 NODE_PKG_DIR = ROOT / "packages" / "server-node"
 PY_PKG_DIR = ROOT / "packages" / "server-python"
@@ -127,7 +132,13 @@ def wheel_venv(tmp_path_factory):
         pytest.skip("uv not available")
 
     dist = tmp_path_factory.mktemp("wheel")
-    _run(["uv", "build", "--wheel", "--out-dir", str(dist)], cwd=PY_PKG_DIR)
+    _DIST_DIRS.append(dist)
+    # Plain `uv build`, not `--wheel`: it builds the sdist and then the wheel
+    # *from that sdist*, which is what PyPI publishing and `pip install <sdist>`
+    # do. Building only the wheel skips that path entirely — and that is how a
+    # release shipped with a `force-include` that resolved in a checkout but not
+    # in an sdist, failing the publish job.
+    _run(["uv", "build", "--out-dir", str(dist)], cwd=PY_PKG_DIR)
     wheels = list(dist.glob("*.whl"))
     assert len(wheels) == 1, f"expected exactly one wheel, got {wheels}"
 
@@ -158,6 +169,37 @@ def test_wheel_imports_outside_source_tree(wheel_venv, tmp_path):
         cwd=tmp_path,
     )
     assert set(json.loads(proc.stdout)) >= CORE_TOOLS
+
+
+def test_sdist_is_self_contained(wheel_venv, tmp_path_factory):
+    """A wheel must be buildable from the sdist alone, outside any checkout.
+
+    Regression guard for the failed 0.2.0 PyPI publish: the contract was
+    force-included from `../../contract/tools.json`, a path that exists in the
+    repo but can never exist inside an sdist.
+    """
+    dist = next(iter(_DIST_DIRS))
+    sdists = list(dist.glob("*.tar.gz"))
+    assert len(sdists) == 1, f"expected exactly one sdist, got {sdists}"
+
+    # Unpack somewhere with no repo above it, then build a wheel from it.
+    workdir = tmp_path_factory.mktemp("sdist-only")
+    with tarfile.open(sdists[0]) as tar:
+        # `filter` is only available from 3.12 (and 3.10/3.11 point releases);
+        # the floor here is 3.10, so pass it only where it certainly exists.
+        extra = {"filter": "data"} if sys.version_info >= (3, 12) else {}
+        tar.extractall(workdir, **extra)
+    unpacked = next(p for p in workdir.iterdir() if p.is_dir())
+
+    out = workdir / "out"
+    _run(["uv", "build", "--wheel", "--out-dir", str(out)], cwd=unpacked)
+    built = list(out.glob("*.whl"))
+    assert len(built) == 1, f"expected one wheel from the sdist, got {built}"
+
+    with zipfile.ZipFile(built[0]) as zf:
+        assert "opcua_mcp_server/tools.json" in zf.namelist(), (
+            "wheel built from the sdist is missing the bundled tool contract"
+        )
 
 
 def test_wheel_does_not_pollute_site_packages(wheel_venv):

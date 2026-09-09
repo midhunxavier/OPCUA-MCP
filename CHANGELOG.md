@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- **Python 3.10+ is now supported** (was 3.13+). Nothing in the codebase needed
+  3.11 or newer; the floor simply excluded most installed Pythons, including the
+  3.9–3.11 common in industrial environments. Verified by installing and driving
+  the server on 3.10, not by inspection.
+- CI now runs the end-to-end suite across the versions the manifests actually
+  claim — Python 3.10/3.13 and Node 18/20/22 — instead of only Python 3.13 and
+  Node 20.
 - The Node server is split from one 857-line `index.ts` into `config`,
   `contract`, `dates`, `connection` (client/session lifecycle plus the capability
   probes), `tools` (the tool implementations and dispatch) and `index` (MCP

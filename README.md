@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/github/license/midhunxavier/OPCUA-MCP)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/midhunxavier/OPCUA-MCP?style=social)](https://github.com/midhunxavier/OPCUA-MCP)
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org)
 [![Node.js 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -121,7 +121,7 @@ Result: "Found 15 variables:
 ## Implementation Languages
 
 ### Python Version (`opcua-mcp-server`)
-- **Language**: Python 3.13+
+- **Language**: Python 3.10+
 - **Framework**: FastMCP
 - **OPC UA Library**: `opcua` (FreeOpcUa)
 - **Transport**: STDIO

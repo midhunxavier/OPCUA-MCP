@@ -11,7 +11,7 @@ files deliberately assert the same error wording.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import pytest
 from opcua_mcp_server import parse_iso_datetime
@@ -26,13 +26,15 @@ def test_none_passes_through():
 
 
 def test_parses_utc_z_suffix():
-    assert parse_iso_datetime("2026-04-23T17:40:00Z") == datetime(2026, 4, 23, 17, 40, tzinfo=UTC)
+    assert parse_iso_datetime("2026-04-23T17:40:00Z") == datetime(
+        2026, 4, 23, 17, 40, tzinfo=timezone.utc
+    )
 
 
 def test_preserves_non_utc_offset():
     """An offset must shift the instant, not be silently dropped."""
     parsed = parse_iso_datetime("2026-04-23T19:40:00+02:00")
-    assert parsed.astimezone(UTC) == datetime(2026, 4, 23, 17, 40, tzinfo=UTC)
+    assert parsed.astimezone(timezone.utc) == datetime(2026, 4, 23, 17, 40, tzinfo=timezone.utc)
 
 
 @pytest.mark.parametrize(

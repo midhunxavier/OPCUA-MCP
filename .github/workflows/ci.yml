@@ -66,19 +66,33 @@ jobs:
         run: uv run --no-sync pytest -v unit/
 
   e2e:
-    name: End-to-end suite (Python + Node)
+    # Covers the versions the manifests actually claim: the declared floors
+    # (requires-python >=3.10, engines.node >=18) and current/latest.
+    name: E2E — Python ${{ matrix.python-version }} / Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.10"
+            node-version: "18"
+          - python-version: "3.13"
+            node-version: "20"
+          - python-version: "3.13"
+            node-version: "22"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: packages/server-node/package-lock.json
 
@@ -89,11 +103,11 @@ jobs:
           npm run build
 
       - name: Sync workspace (all packages)
-        run: uv sync --all-packages
+        run: uv sync --all-packages --python ${{ matrix.python-version }}
 
       - name: Run end-to-end tests
         working-directory: tests
-        run: uv run --no-sync pytest -v e2e/
+        run: uv run --no-sync pytest -v e2e/ unit/
 
   # Builds the real npm tarball and Python wheel, installs them somewhere
   # isolated, and drives the installed entry points. The rest of CI runs from the

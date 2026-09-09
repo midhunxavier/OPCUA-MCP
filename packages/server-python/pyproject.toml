@@ -3,7 +3,7 @@ name = "opcua-mcp-server"
 version = "0.1.2"
 description = "MCP server exposing OPC UA read/write/browse/method/history tools (FastMCP + python-opcua)."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "cryptography>=45.0.2",
     "httpx>=0.28.1",

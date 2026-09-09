@@ -25,7 +25,7 @@ The two MCP servers share a single tool contract ([`contract/tools.json`](contra
 
 ## Prerequisites
 
-- **Python 3.13+** and [`uv`](https://docs.astral.sh/uv/)
+- **Python 3.10+** and [`uv`](https://docs.astral.sh/uv/)
 - **Node.js 18+** and **npm**
 - No OPC UA broker needed — the mock server is included.
 

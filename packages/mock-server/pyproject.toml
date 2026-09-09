@@ -3,7 +3,7 @@ name = "opcua-local-server"
 version = "0.1.2"
 description = "Mock industrial OPC UA server (simulated PLC/sensors) for local development and tests."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "opcua>=0.98.13",
 ]

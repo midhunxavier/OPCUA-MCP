@@ -10,7 +10,7 @@ dev = ["ruff>=0.14"]
 #   uv run ruff format .         # format
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py310"
 extend-exclude = ["packages/server-node/build", "packages/server-node/node_modules"]
 
 [tool.ruff.lint]

@@ -12,7 +12,12 @@ expected to carry the same version.
 from __future__ import annotations
 
 import json
-import tomllib
+import sys
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - 3.10 only
+    import tomli as tomllib
 
 from conftest import ROOT
 

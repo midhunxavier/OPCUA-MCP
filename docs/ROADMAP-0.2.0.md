@@ -45,7 +45,7 @@ ends with a green test suite — the same working style as
 | 3 | Quality gates (ruff / prettier / tsc) | low, noisy diff | ✅ done |
 | 4 | Unit-test layer | low | ✅ done |
 | 5 | Packaging correctness + module split | **high** | ✅ done |
-| 6 | Python floor + CI matrix | medium | ☐ |
+| 6 | Python floor + CI matrix | medium | ✅ done |
 | 7 | Aggregate parity in Python | medium | ☐ |
 | 8 | Docs consolidation | low | ☐ |
 | 9 | Repo furniture | low | ✅ done |

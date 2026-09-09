@@ -154,8 +154,11 @@ async def test_history_tool_exposed_when_supported(server):
 
 
 async def test_aggregate_tool_hidden_when_unsupported(server):
-    """The mock server advertises no aggregate functions, so the Node aggregate
-    tool must NOT be exposed (capability gating)."""
+    """The mock server advertises no aggregate functions, so neither server may
+    expose the aggregate tool (capability gating).
+
+    The positive cases live in ``e2e/test_aggregate_e2e.py``, which runs against
+    the aggregate-capable mock on :4841."""
     _impl, params = server
     async with connect(params) as session:
         names = await tool_names(session)
@@ -167,17 +170,16 @@ async def test_aggregate_direct_call_errors_cleanly(server):
     crash or wrongly report 'Invalid aggregate function' due to an empty cache —
     it should recompute support on demand and return a clear message.
 
-    Node-only, but no longer because Python lacks the tool: both runtimes now
-    implement it and both correctly hide it here, since the mock advertises no
-    aggregate functions. The difference is what a *direct* call to a hidden tool
-    does. The Node server keeps the handler reachable and returns the capability
-    message; FastMCP dispatches only registered tools, so Python answers
-    'Unknown tool'. Both are defensible; the contract only governs what
-    tools/list advertises.
+    Node-only by construction, and not because Python lacks the tool — both
+    runtimes implement it now. The Python server gates registration at import
+    time, so against a server without aggregate support the tool is never
+    registered and a direct call correctly returns "Unknown tool". The
+    empty-cache failure mode this guards against also cannot arise there: the
+    Python server re-probes on every call and holds no cache to go stale.
     """
     impl, params = server
     if impl != "node":
-        pytest.skip("direct calls to unregistered tools are Node-only behaviour")
+        pytest.skip("Node-only: the Python server does not register the tool at all here")
     async with connect(params) as session:
         result = await session.call_tool(
             "read_aggregate_opcua_node",

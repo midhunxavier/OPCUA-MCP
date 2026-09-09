@@ -50,10 +50,11 @@ The probes are **best-effort by design**: any failure yields "not supported"
 rather than an error. A transient OPC UA outage must not strip the core tools
 from `tools/list`.
 
-> The bundled mock server enables history but advertises no aggregate functions.
-> So the aggregate tool is gated off throughout the test suite, and its read path
-> has no end-to-end coverage on either runtime — only unit coverage of the node-ID
-> mapping and validation messages.
+> There are two mocks, on purpose. The main one (`packages/mock-server/`, :4840)
+> enables history and advertises **no** aggregate functions, so the suite can
+> assert the aggregate tool stays hidden when unsupported. The second
+> (`packages/mock-server-aggregate/`, :4841) advertises aggregates, so the read
+> path itself is covered on both runtimes.
 
 ## The three invariants
 
@@ -85,7 +86,8 @@ packages/server-python/      FastMCP + opcua (FreeOpcUa)
 packages/server-node/        @modelcontextprotocol/sdk + node-opcua
   src/                       config · contract · dates · connection
                              · tools · index
-packages/mock-server/        simulated PLC/sensors, for local dev and tests
+packages/mock-server/        simulated PLC/sensors (:4840, no aggregates)
+packages/mock-server-aggregate/  aggregate-capable mock (:4841)
 tests/                       unit/ (fast) · e2e/ (both servers) · smoke/ (artifacts)
 examples/                    standalone demo scripts
 ```

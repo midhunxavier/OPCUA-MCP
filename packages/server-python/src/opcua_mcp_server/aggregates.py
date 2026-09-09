@@ -9,7 +9,7 @@ the node IDs a ``ReadProcessedDetails`` request needs.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection
 
 from opcua import ua
 
@@ -19,6 +19,15 @@ _PREFIX = "AggregateFunction_"
 def known_aggregate_names() -> frozenset[str]:
     """Every aggregate function name defined by the OPC UA spec."""
     return frozenset(name[len(_PREFIX) :] for name in dir(ua.ObjectIds) if name.startswith(_PREFIX))
+
+
+def spec_aggregate_node_ids() -> dict[str, ua.NodeId]:
+    """Every spec-defined aggregate function name mapped to its node ID."""
+    return {
+        name.removeprefix(_PREFIX): ua.NodeId(identifier, 0)
+        for name, identifier in vars(ua.ObjectIds).items()
+        if name.startswith(_PREFIX)
+    }
 
 
 def aggregate_node_id(name: str) -> ua.NodeId:
@@ -34,7 +43,7 @@ def aggregate_node_id(name: str) -> ua.NodeId:
     return ua.NodeId(identifier, 0)
 
 
-def validate_aggregate_function(name: str, supported: Sequence[str]) -> None:
+def validate_aggregate_function(name: str, supported: Collection[str]) -> None:
     """Raise unless ``name`` is one the connected server advertises.
 
     The two messages are mirrored verbatim by the Node server, so both runtimes

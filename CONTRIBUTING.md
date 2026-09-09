@@ -12,7 +12,8 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 
 | Path | What it is |
 |------|------------|
-| `packages/mock-server/` | Mock "Industrial Control System" OPC UA server (the simulated PLC/sensors) |
+| `packages/mock-server/` | Mock "Industrial Control System" OPC UA server (:4840; advertises no aggregate functions, on purpose) |
+| `packages/mock-server-aggregate/` | Aggregate-capable mock (:4841), backing the aggregate tests |
 | `packages/server-python/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa), a `src/` package |
 | `packages/server-node/` | **Node** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
 | `tests/` | End-to-end pytest suite driving both servers via the `mcp` SDK |

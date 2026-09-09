@@ -42,6 +42,11 @@ First release published as **`opcua-mcp-server`**. The previously published
   with the same capability gating and the same error wording as the Node server.
   It was previously Node-only, which made the README's "two interchangeable
   implementations" claim untrue.
+- A second, aggregate-capable mock OPC UA server (`packages/mock-server-aggregate`,
+  port 4841) and `tests/e2e/test_aggregate_e2e.py`, which check aggregate output
+  arithmetically against the mock's known ramp rate rather than merely for
+  non-emptiness. The main mock keeps advertising no aggregate functions on
+  purpose, so the suite can still assert the tool is hidden when unsupported.
 - **Python 3.10+ is now supported** (was 3.13+). Nothing in the codebase needed
   3.11 or newer; the floor simply excluded most installed Pythons, including the
   3.9–3.11 common in industrial environments. Verified by installing and driving
@@ -85,13 +90,6 @@ First release published as **`opcua-mcp-server`**. The previously published
   stdio against the mock OPC UA server.
 - `CONTRIBUTING.md`, `TESTING.md`, and `EXAMPLES.md` documentation.
 - `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and CI workflow.
-
-### Known issues
-- Neither server's aggregate *happy path* has end-to-end coverage: the bundled
-  mock OPC UA server advertises no aggregate functions, so the tool is gated off
-  in the suite on both runtimes. The name/node-ID mapping and the validation
-  messages are unit-tested; the read itself is not. Giving the mock aggregate
-  support would close this.
 
 ### Fixed
 - **The Node server no longer silently returns data for the wrong day.**

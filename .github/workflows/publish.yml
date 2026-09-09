@@ -30,6 +30,10 @@ jobs:
           npm ci
           npm run build
 
+      - name: Install aggregate mock OPC UA server
+        working-directory: packages/mock-server-aggregate
+        run: npm ci
+
       - name: Sync workspace
         run: uv sync --all-packages
 

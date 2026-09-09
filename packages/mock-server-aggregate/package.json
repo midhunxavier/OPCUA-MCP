@@ -1,0 +1,19 @@
+{
+  "name": "opcua-mock-aggregate-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Aggregate-capable mock OPC UA server used by the end-to-end test suite",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "node-opcua": "^2.128.0",
+    "node-opcua-aggregates": "^2.128.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

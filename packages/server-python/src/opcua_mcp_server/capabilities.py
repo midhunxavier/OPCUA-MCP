@@ -6,9 +6,9 @@ server actually advertises it, mirroring the Node server's gating.
 
 from __future__ import annotations
 
-from opcua import Client
+from opcua import Client, ua
 
-from .aggregates import known_aggregate_names
+from .aggregates import spec_aggregate_node_ids
 from .contract import AGGREGATE_NODE_ID, HISTORY_NODE_ID
 
 
@@ -29,23 +29,37 @@ def server_supports_history(url: str) -> bool:
         return False
 
 
-def server_aggregate_functions(url: str) -> list[str]:
-    """Names of the aggregate functions the server advertises.
+def server_aggregate_functions(url: str) -> dict[str, ua.NodeId]:
+    """The aggregate functions the server advertises, mapped to their node IDs.
 
-    Browses ``Server/ServerCapabilities/AggregateFunctions`` and keeps the
-    children that name a spec-defined aggregate, mirroring how the Node server
-    builds the same list. Best-effort: any failure yields an empty list rather
-    than breaking tools/list, so a transient outage still leaves the core tools
-    advertised.
+    Browses ``Server/ServerCapabilities/AggregateFunctions`` and keeps only
+    children whose browse name *and* node ID match a spec-defined aggregate, so a
+    server exposing something unexpected under that folder cannot smuggle in a
+    node ID we then send back in a request.
+
+    Best-effort: any failure yields an empty mapping rather than an error, so a
+    transient outage leaves the core tools advertised instead of breaking
+    tools/list.
     """
-    known = known_aggregate_names()
+    spec = spec_aggregate_node_ids()
     try:
         probe = Client(url)
         probe.connect()
         try:
-            children = probe.get_node(AGGREGATE_NODE_ID).get_children()
-            return [name for child in children if (name := child.get_browse_name().Name) in known]
+            node = probe.get_node(AGGREGATE_NODE_ID)
+            advertised = {}
+            for child in node.get_referenced_nodes(
+                refs=ua.ObjectIds.References,
+                direction=ua.BrowseDirection.Forward,
+            ):
+                try:
+                    name = child.get_browse_name().Name
+                except Exception:
+                    continue
+                if name in spec and child.nodeid == spec[name]:
+                    advertised[name] = child.nodeid
+            return advertised
         finally:
             probe.disconnect()
     except Exception:
-        return []
+        return {}

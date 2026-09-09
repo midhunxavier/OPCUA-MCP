@@ -14,7 +14,7 @@ from mcp.server.fastmcp import Context, FastMCP
 from opcua import Client, ua
 from opcua.ua import NodeClass
 
-from .aggregates import aggregate_node_id, validate_aggregate_function
+from .aggregates import validate_aggregate_function
 from .capabilities import server_aggregate_functions, server_supports_history
 from .config import SERVER_URL
 from .contract import DESC
@@ -131,14 +131,14 @@ if server_supports_history(SERVER_URL):
 # Tool: Read server-computed aggregates over a node's history.
 # Registered only when the server advertises aggregate functions, mirroring the
 # Node server's capability gating.
-_AGGREGATE_FUNCTIONS: list[str] = server_aggregate_functions(SERVER_URL)
+_AGGREGATE_FUNCTIONS = server_aggregate_functions(SERVER_URL)
 
 
 def read_aggregate_opcua_node(
     node_id: str,
+    ctx: Context,
     start_time: str,
     aggregate_function: str,
-    ctx: Context,
     end_time: str | None = None,
     processing_interval: float = 0,
 ) -> list[dict]:
@@ -158,30 +158,37 @@ def read_aggregate_opcua_node(
         list[dict]: One entry per interval, shaped
             `{ "value": <value>, "timestamp": <timestamp>, "status": <status> }`
     """
-    validate_aggregate_function(aggregate_function, _AGGREGATE_FUNCTIONS)
+    # Re-probe rather than trusting the import-time snapshot: a server may gain or
+    # lose aggregate support while this process is running, and answering from a
+    # stale cache would report the wrong supported set.
+    aggregate_functions = server_aggregate_functions(SERVER_URL)
+    validate_aggregate_function(aggregate_function, aggregate_functions)
 
     client = ctx.request_context.lifespan_context["opcua_client"]
-    node = client.get_node(node_id)
+    try:
+        details = ua.ReadProcessedDetails()
+        details.StartTime = parse_iso_datetime(start_time)
+        # UTC, not naive local time: `parse_iso_datetime` yields aware UTC, so a
+        # naive `datetime.now()` here would shift the window end by the host's UTC
+        # offset and pad the result with an empty bucket per interval in between.
+        details.EndTime = parse_iso_datetime(end_time) or datetime.now(timezone.utc)
+        details.ProcessingInterval = processing_interval
+        details.AggregateType = [aggregate_functions[aggregate_function]]
 
-    details = ua.ReadProcessedDetails()
-    details.StartTime = parse_iso_datetime(start_time)
-    details.EndTime = parse_iso_datetime(end_time) or datetime.now(timezone.utc)
-    details.ProcessingInterval = processing_interval
-    details.AggregateType = [aggregate_node_id(aggregate_function)]
-    details.AggregateConfiguration = ua.AggregateConfiguration(UseServerCapabilitiesDefaults=True)
+        result = client.get_node(node_id).history_read(details)
+        if not result.StatusCode.is_good():
+            raise ValueError(f"Read aggregate failed with status: {result.StatusCode}")
 
-    result = node.history_read(details)
-    if result.StatusCode.is_bad():
-        raise ValueError(f"Read aggregate failed with status: {result.StatusCode.name}")
-
-    return [
-        {
-            "value": str(v.Value.Value),
-            "timestamp": str(v.SourceTimestamp),
-            "status": str(v.StatusCode.name),
-        }
-        for v in result.HistoryData.DataValues
-    ]
+        return [
+            {
+                "value": str(v.Value.Value),
+                "timestamp": str(v.SourceTimestamp),
+                "status": str(v.StatusCode.name),
+            }
+            for v in result.HistoryData.DataValues
+        ]
+    except Exception as e:
+        raise ValueError(f"Failed to read node {node_id}: {e!s}") from e
 
 
 if _AGGREGATE_FUNCTIONS:

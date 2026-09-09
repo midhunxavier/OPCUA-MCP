@@ -128,6 +128,11 @@ Beyond what the tools check:
 - If a change was AI-assisted, keep the `Co-Authored-By:` trailer.
 - PRs from forks: enable **"Allow edits by maintainers"** so reviewers can rebase.
 
+## Releasing
+
+See **[docs/releasing.md](docs/releasing.md)**. Releases are tag-triggered and
+gated on the full suite plus the artifact smoke tests.
+
 ## Security note
 
 The servers connect with `SecurityPolicy.None` / `MessageSecurityMode.None` for

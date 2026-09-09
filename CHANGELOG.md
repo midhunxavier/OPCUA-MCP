@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-09
+
+First release published as **`opcua-mcp-server`**. The previously published
+`opcua-mcp-npx-server` is deprecated in favour of this name.
+
 ### Changed
 - Renamed the npm package `opcua-mcp-npx-server` → `opcua-mcp-server` (the old
   name will be deprecated on npm with a pointer to the new one).
@@ -118,4 +123,6 @@ with the seven core OPC UA tools (read, write, browse, read/write multiple, call
 method, get all variables). This is the only name published to date; the rename
 to `opcua-mcp-server` ships with the next release.
 
-[Unreleased]: https://github.com/midhunxavier/OPCUA-MCP/compare/main...HEAD
+[Unreleased]: https://github.com/midhunxavier/OPCUA-MCP/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/midhunxavier/OPCUA-MCP/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/midhunxavier/OPCUA-MCP/releases/tag/v0.1.2

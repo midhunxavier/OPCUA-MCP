@@ -49,7 +49,7 @@ ends with a green test suite — the same working style as
 | 7 | Parity: aggregate tool + date handling | medium | ✅ done |
 | 8 | Docs consolidation | low | ✅ done |
 | 9 | Repo furniture | low | ✅ done |
-| 10 | 0.2.0 release + publish | **irreversible** | ☐ |
+| 10 | 0.2.0 release + publish | **irreversible** | prepared — awaiting maintainer |
 
 ### Phase 1 — Terminology: "npx" → "Node"
 

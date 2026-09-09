@@ -1,0 +1,97 @@
+name: Publish
+
+# Tag-triggered so a release is never a hand-run command that can skip a step.
+# The npm package in particular needs `npm run build` to stage build/contract.json
+# and build/version.json; publishing without it ships a package that dies at
+# startup.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify before publishing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: packages/server-node/package-lock.json
+
+      - name: Build Node server
+        working-directory: packages/server-node
+        run: |
+          npm ci
+          npm run build
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Tag must match the manifests
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./packages/server-node/package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package version $PKG"
+            exit 1
+          fi
+        if: startsWith(github.ref, 'refs/tags/v')
+
+      - name: Full test suite
+        working-directory: tests
+        run: uv run --no-sync pytest -v
+
+      - name: Artifact smoke tests
+        working-directory: tests
+        run: uv run --no-sync pytest -v -m smoke smoke/
+
+  npm:
+    name: Publish to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+
+      - name: Build
+        working-directory: packages/server-node
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish
+        working-directory: packages/server-node
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  pypi:
+    name: Publish to PyPI
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build wheel and sdist
+        run: uv build --out-dir dist packages/server-python
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1

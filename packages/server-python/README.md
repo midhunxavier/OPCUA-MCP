@@ -13,7 +13,7 @@ This MCP server acts as a bridge between AI assistants and OPC UA servers, allow
 
 ## Tools
 
-See the central per-tool reference in **[../../docs/examples.md](../../docs/examples.md)**; the shared tool surface is defined in **[../../contract/tools.json](../../contract/tools.json)**.
+See the central per-tool reference in **[docs/examples.md](https://github.com/midhunxavier/OPCUA-MCP/blob/main/docs/examples.md)**; the shared tool surface is defined in **[contract/tools.json](https://github.com/midhunxavier/OPCUA-MCP/blob/main/contract/tools.json)**.
 
 ## Features
 
@@ -29,11 +29,39 @@ See the central per-tool reference in **[../../docs/examples.md](../../docs/exam
 
 ### Prerequisites
 
-- Python 3.13 or higher
+- Python 3.10 or higher
 - Access to an OPC UA server (local or remote)
 - UV package manager (recommended) or pip
 
-### Setup
+### From PyPI (recommended)
+
+```bash
+uvx opcua-mcp-server            # run without installing
+uv tool install opcua-mcp-server   # or install permanently
+pip install opcua-mcp-server       # or with pip
+```
+
+Point it at your OPC UA endpoint:
+
+```bash
+export OPCUA_SERVER_URL="opc.tcp://localhost:4840"
+```
+
+In an MCP client:
+
+```json
+{
+  "mcpServers": {
+    "opcua": {
+      "command": "uvx",
+      "args": ["opcua-mcp-server"],
+      "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
+    }
+  }
+}
+```
+
+### From source (development)
 
 1. **Install dependencies for the whole workspace (run from the repo root):**
    ```bash
@@ -143,4 +171,4 @@ Result: Found 5 variables:
 
 ## API Reference
 
-See the central per-tool reference in **[../../docs/examples.md](../../docs/examples.md)** for full tool signatures, parameters, and return formats. The shared tool surface is defined in **[../../contract/tools.json](../../contract/tools.json)**.
+See the central per-tool reference in **[docs/examples.md](https://github.com/midhunxavier/OPCUA-MCP/blob/main/docs/examples.md)** for full tool signatures, parameters, and return formats. The shared tool surface is defined in **[contract/tools.json](https://github.com/midhunxavier/OPCUA-MCP/blob/main/contract/tools.json)**.

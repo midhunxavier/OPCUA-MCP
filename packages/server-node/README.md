@@ -56,7 +56,7 @@ OPCUA_SERVER_URL=opc.tcp://192.168.1.100:4840 npx opcua-mcp-server
 
 ## Tools
 
-This server exposes the shared OPC UA MCP tool set. See the full per-tool reference (inputs, outputs, node-ID map) in **[../../docs/examples.md](../../docs/examples.md)**. The tool surface is defined once in **[../../contract/tools.json](../../contract/tools.json)**, which this server builds its `tools/list` from.
+This server exposes the shared OPC UA MCP tool set. See the full per-tool reference (inputs, outputs, node-ID map) in **[docs/examples.md](https://github.com/midhunxavier/OPCUA-MCP/blob/main/docs/examples.md)**. The tool surface is defined once in **[contract/tools.json](https://github.com/midhunxavier/OPCUA-MCP/blob/main/contract/tools.json)**, which this server builds its `tools/list` from.
 
 ## Integration with Cursor/Claude
 

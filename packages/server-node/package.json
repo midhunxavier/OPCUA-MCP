@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "node-opcua": "^2.128.0",
+    "node-opcua": "^2.181.1",
     "node-opcua-client": "^2.128.0"
   },
   "devDependencies": {

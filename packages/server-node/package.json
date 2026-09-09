@@ -42,7 +42,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "node-opcua": "^2.128.0",
-    "node-opcua-client": "^2.128.0"
+    "node-opcua-client": "^2.181.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

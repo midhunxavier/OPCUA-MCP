@@ -3,7 +3,7 @@
 A phased plan to turn the post-restructure repo into a maintainable open-source
 project and ship the renamed package. Each phase is independently committable and
 ends with a green test suite — the same working style as
-[`RESTRUCTURE.md`](RESTRUCTURE.md).
+[`RESTRUCTURE.md`](archive/RESTRUCTURE.md).
 
 ## Decisions (locked)
 
@@ -47,7 +47,7 @@ ends with a green test suite — the same working style as
 | 5 | Packaging correctness + module split | **high** | ✅ done |
 | 6 | Python floor + CI matrix | medium | ✅ done |
 | 7 | Parity: aggregate tool + date handling | medium | ✅ done |
-| 8 | Docs consolidation | low | ☐ |
+| 8 | Docs consolidation | low | ✅ done |
 | 9 | Repo furniture | low | ✅ done |
 | 10 | 0.2.0 release + publish | **irreversible** | ☐ |
 

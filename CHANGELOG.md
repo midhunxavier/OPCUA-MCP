@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- `docs/architecture.md` — how the two runtimes, the shared contract and the
+  capability gating fit together, plus the three invariants that are easy to
+  break (stdout is the transport, nothing hardcodes a version, the published
+  artifact is what users get).
 - `read_aggregate_opcua_node` is now implemented on the **Python** server too,
   with the same capability gating and the same error wording as the Node server.
   It was previously Node-only, which made the README's "two interchangeable

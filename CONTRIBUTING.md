@@ -4,6 +4,7 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 (Python and TypeScript/Node) that bridge AI assistants to OPC UA servers, plus a
 **mock industrial OPC UA server** for local development and testing.
 
+- **[docs/architecture.md](docs/architecture.md)** — how the pieces fit, and the invariants to preserve
 - **[docs/testing.md](docs/testing.md)** — how to test (automated suite, MCP Inspector, AI agents)
 - **[docs/examples.md](docs/examples.md)** — per-tool inputs/outputs and node-ID reference
 
@@ -15,7 +16,8 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 | `packages/server-python/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa), a `src/` package |
 | `packages/server-node/` | **Node** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
 | `tests/` | End-to-end pytest suite driving both servers via the `mcp` SDK |
-| `docs/` | Usage and testing docs (`examples.md`, `testing.md`) |
+| `docs/` | Usage docs (`architecture.md`, `examples.md`, `testing.md`); `archive/` holds executed plans |
+| `examples/` | Standalone demo scripts (not part of any package) |
 
 ```
 AI assistant / MCP client  ──stdio──►  MCP server (Python OR Node)  ──OPC UA/TCP──►  mock server :4840

@@ -15,11 +15,11 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
+[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Architecture](docs/architecture.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
 
 </div>
 
-![OPC UA MCP Server Screenshot](Media/ss.png)
+![OPC UA MCP Server Screenshot](docs/assets/screenshot.png)
 
 ## Overview
 
@@ -120,19 +120,21 @@ Result: "Found 15 variables:
 
 ## Implementation Languages
 
-### Python Version (`opcua-mcp-server`)
-- **Language**: Python 3.10+
-- **Framework**: FastMCP
-- **OPC UA Library**: `opcua` (FreeOpcUa)
-- **Transport**: STDIO
-- **Entry Point**: `opcua_mcp_server.py` (console script: `opcua-mcp-server`)
+Both are published as **`opcua-mcp-server`** (npm and PyPI), speak MCP over
+**stdio**, and expose the identical tool surface. Pick whichever fits your stack.
 
-### Node Version (`opcua-mcp-server`)
-- **Language**: TypeScript/Node.js
-- **Framework**: @modelcontextprotocol/sdk
-- **OPC UA Library**: `node-opcua`
-- **Transport**: STDIO
-- **Entry Point**: `src/index.ts` (compiled to `build/index.js`)
+| | Python | Node |
+|---|---|---|
+| Requires | Python 3.10+ | Node 18+ |
+| Framework | FastMCP | `@modelcontextprotocol/sdk` |
+| OPC UA library | `opcua` (FreeOpcUa) | `node-opcua` |
+| Source | `packages/server-python/` | `packages/server-node/` |
+| Run | `uvx opcua-mcp-server` | `npx opcua-mcp-server` |
+
+Exact dependency versions live in the manifests
+([`pyproject.toml`](packages/server-python/pyproject.toml),
+[`package.json`](packages/server-node/package.json)) rather than being restated
+here, where they would drift.
 
 ## Tools
 
@@ -205,21 +207,6 @@ Both versions use the same environment variable:
   }
 }
 ```
-
-## Dependencies
-
-### Python Version
-- `mcp[cli]>=1.9.1`: MCP framework
-- `opcua>=0.98.13`: OPC UA client library
-- `cryptography>=45.0.2`: Security support
-- `httpx>=0.28.1`: HTTP client
-
-### Node Version
-- `@modelcontextprotocol/sdk`: MCP SDK for Node.js
-- `node-opcua`: Comprehensive OPC UA library
-- `typescript`: TypeScript compiler
-- `@types/node`: Node.js type definitions
-
 
 ## Testing
 

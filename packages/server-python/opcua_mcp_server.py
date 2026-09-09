@@ -1,9 +1,12 @@
 import asyncio
+import json
 import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -11,10 +14,6 @@ from opcua import Client
 from opcua.ua import NodeClass
 
 server_url = os.getenv("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
-
-import json
-from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
 
 
 def _load_contract() -> dict:
@@ -116,7 +115,9 @@ def _parse_iso_datetime(value: str | None) -> datetime | None:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except (ValueError, TypeError):
-        raise ValueError(f'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z')
+        raise ValueError(
+            f'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z'
+        ) from None
 
 
 # Tool: Read historical values of an OPC UA node.
@@ -142,7 +143,8 @@ def read_history_opcua_node(
         num_values (int): Number of values to read (default: unlimited)
 
     Returns:
-        list[dict]: An array of values `{ "value": <value>, "timestamp": <timestamp>, "status": "Good" }`
+        list[dict]: An array of values shaped
+            `{ "value": <value>, "timestamp": <timestamp>, "status": "Good" }`
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
     node = client.get_node(node_id)
@@ -226,7 +228,8 @@ def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
         node_id (str): The OPC UA node ID to browse (e.g., 'ns=0;i=85' for Objects folder).
 
     Returns:
-        str: A string representation of a list of child nodes, including their NodeId and BrowseName.
+        str: A string representation of a list of child nodes, including their
+             NodeId and BrowseName.
              Returns an error message on failure.
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
@@ -260,7 +263,7 @@ def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
 # Tool: Call an OPC UA method
 @mcp.tool(description=_DESC["call_opcua_method"])
 def call_opcua_method(
-    object_node_id: str, method_node_id: str, ctx: Context, arguments: list[Any] = None
+    object_node_id: str, method_node_id: str, ctx: Context, arguments: list[Any] | None = None
 ) -> str:
     """
     Call a method on a specific OPC UA object node.
@@ -308,7 +311,10 @@ def call_opcua_method(
         # the resolved method Node to call it by node id.
         result = object_node.call_method(method_node, *method_args)
 
-        return f"Method call successful. Object: {object_node_id}, Method: {method_node_id}, Result: {result}"
+        return (
+            f"Method call successful. Object: {object_node_id}, "
+            f"Method: {method_node_id}, Result: {result}"
+        )
 
     except Exception as e:
         return f"Error calling method {method_node_id} on object {object_node_id}: {e!s}"
@@ -324,7 +330,8 @@ def read_multiple_opcua_nodes(node_ids: list[str], ctx: Context) -> str:
         node_ids (List[str]): A list of OPC UA node IDs to read (e.g., ['ns=2;i=2', 'ns=2;i=3']).
 
     Returns:
-        str: A string representation of a dictionary mapping node IDs to their values, or an error message.
+        str: A string representation of a dictionary mapping node IDs to their
+             values, or an error message.
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
     try:
@@ -396,7 +403,8 @@ def write_multiple_opcua_nodes(nodes_to_write: list[dict[str, Any]], ctx: Contex
 @mcp.tool(description=_DESC["get_all_variables"])
 def get_all_variables(ctx: Context) -> str:
     """
-    Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object.
+    Get all available variables from the OPC UA server, excluding those under
+    the built-in 'Server' object.
 
     Returns:
         str: A string representation of all variables with their name, nodeid, object_id, value,

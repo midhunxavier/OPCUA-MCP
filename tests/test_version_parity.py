@@ -70,9 +70,11 @@ async def test_server_reports_manifest_version(impl, opcua_server):
         pytest.skip("Node server not built")
     expected = _node_version() if impl == "node" else _py_version(PYTHON_PYPROJECT)
 
-    async with stdio_client(_server_params(impl, opcua_server)) as (read, write):
-        async with ClientSession(read, write) as session:
-            info = (await session.initialize()).serverInfo
+    async with (
+        stdio_client(_server_params(impl, opcua_server)) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        info = (await session.initialize()).serverInfo
 
     assert info.name == "opcua-mcp-server", f"{impl} server identifies as {info.name!r}"
     assert info.version == expected, f"{impl} reports {info.version!r}, manifest says {expected!r}"

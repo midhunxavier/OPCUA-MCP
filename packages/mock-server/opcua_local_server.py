@@ -78,7 +78,8 @@ class IndustrialControlSystem:
         for child in industrial_system.get_children():
             for variable in child.get_variables():
                 logging.info(
-                    f"historize {child.get_display_name().to_string()};{variable.get_display_name().to_string()}"
+                    f"historize {child.get_display_name().to_string()};"
+                    f"{variable.get_display_name().to_string()}"
                 )
                 self.server.historize_node_data_change(
                     variable, period=timedelta(minutes=10), count=0
@@ -220,7 +221,7 @@ class IndustrialControlSystem:
         """Create OPC UA methods for system control."""
 
         # Start production method (input: rate Double, output: Boolean)
-        start_method = parent_folder.add_method(
+        parent_folder.add_method(
             2,
             "StartProduction",
             self.start_production_callback,
@@ -229,22 +230,22 @@ class IndustrialControlSystem:
         )
 
         # Stop production method (output: Boolean)
-        stop_method = parent_folder.add_method(
+        parent_folder.add_method(
             2, "StopProduction", self.stop_production_callback, [], [ua.VariantType.Boolean]
         )
 
         # Emergency stop method (output: Boolean)
-        emergency_method = parent_folder.add_method(
+        parent_folder.add_method(
             2, "EmergencyStop", self.emergency_stop_callback, [], [ua.VariantType.Boolean]
         )
 
         # Reset system method (output: Boolean)
-        reset_method = parent_folder.add_method(
+        parent_folder.add_method(
             2, "ResetSystem", self.reset_system_callback, [], [ua.VariantType.Boolean]
         )
 
         # Calibrate sensors method (input: sensor name String, output: Boolean)
-        calibrate_method = parent_folder.add_method(
+        parent_folder.add_method(
             2,
             "CalibrateSensors",
             self.calibrate_sensors_callback,

@@ -64,7 +64,8 @@ def main():
                 history_data = sensor_node.read_raw_history(starttime, endtime, 5)
                 for history_data_value in history_data:
                     print(
-                        f"  {sensor_name}: {history_data_value.Value.Value:.2f} @ {history_data_value.SourceTimestamp}"
+                        f"  {sensor_name}: {history_data_value.Value.Value:.2f}"
+                        f" @ {history_data_value.SourceTimestamp}"
                     )
             except Exception as e:
                 print(f"  ⚠️ Error reading {sensor_name}: {e}")
@@ -208,7 +209,9 @@ def main():
         try:
             client.disconnect()
             print("🔌 Disconnected from server")
-        except:
+        except Exception:
+            # Best-effort teardown for a demo script; a failure to disconnect
+            # should not mask whatever the script was actually doing.
             pass
 
 

@@ -156,7 +156,7 @@ async def test_history_tool_exposed_when_supported(server):
 async def test_aggregate_tool_hidden_when_unsupported(server):
     """The mock server advertises no aggregate functions, so the Node aggregate
     tool must NOT be exposed (capability gating)."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         names = await tool_names(session)
     assert "read_aggregate_opcua_node" not in names
@@ -185,7 +185,7 @@ async def test_aggregate_direct_call_errors_cleanly(server):
 
 
 async def test_read_single_node(server):
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool("read_opcua_node", {"node_id": NODE["Temperature"]})
     assert not result.isError
@@ -195,7 +195,7 @@ async def test_read_single_node(server):
 
 
 async def test_read_multiple_nodes(server):
-    impl, params = server
+    _impl, params = server
     ids = [NODE["Temperature"], NODE["Pressure"], NODE["PumpEnabled"]]
     async with connect(params) as session:
         result = await session.call_tool("read_multiple_opcua_nodes", {"node_ids": ids})
@@ -206,7 +206,7 @@ async def test_read_multiple_nodes(server):
 
 
 async def test_get_all_variables(server):
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool("get_all_variables", {})
     assert not result.isError
@@ -216,7 +216,7 @@ async def test_get_all_variables(server):
 
 
 async def test_browse_children(server):
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             "browse_opcua_node_children", {"node_id": NODE["IndustrialControlSystem"]}
@@ -229,7 +229,7 @@ async def test_browse_children(server):
 
 async def test_write_numeric_node(server):
     """Writing a Double actuator should succeed (the sim may overwrite it later)."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             "write_opcua_node", {"node_id": NODE["ValvePosition"], "value": "80"}
@@ -240,7 +240,7 @@ async def test_write_numeric_node(server):
 
 async def test_write_boolean_node(server):
     """Writing a Boolean node with 'true' must succeed (regression: bool handling)."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             "write_opcua_node", {"node_id": NODE["StopProductionCommand"], "value": "true"}
@@ -252,7 +252,7 @@ async def test_write_boolean_node(server):
 async def test_call_method_start_then_stop(server):
     """Drive production via the StartProduction / StopProduction methods and check
     that SystemMode reacts. Exercises call_opcua_method + the method callbacks."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         methods = _discover_methods(await _browse_json(session, NODE["Methods"]))
         assert "StartProduction" in methods and "StopProduction" in methods

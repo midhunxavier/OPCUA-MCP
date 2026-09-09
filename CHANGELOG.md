@@ -92,6 +92,11 @@ First release published as **`opcua-mcp-server`**. The previously published
 - `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and CI workflow.
 
 ### Fixed
+- **The Node server now falls back from IPv6 to IPv4 when connecting.** Node 20+
+  enables Happy Eyeballs by default; Node 18 does not, so the documented default
+  endpoint `opc.tcp://localhost:4840` resolved to `::1` and failed outright
+  against an OPC UA server listening on IPv4, rather than retrying `127.0.0.1`.
+  Found by the new Node 18 CI job. The server now opts in explicitly.
 - **The Node server no longer silently returns data for the wrong day.**
   `toDate` relied on V8's `Date` parser, which rolls an out-of-range day over
   into the next month, so a history read for `2026-02-30` quietly returned

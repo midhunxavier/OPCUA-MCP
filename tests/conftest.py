@@ -47,6 +47,22 @@ AGGREGATE_NODE_ID = "ns=1;i=1001"
 # here than for the raw-history test against the main mock.
 AGGREGATE_WARMUP_SECONDS = 20
 
+# The aggregate mock pulls `node-opcua-aggregates`, whose transitive deps
+# (@peculiar/x509, @ster5/global-mutex) require Node 20 — npm only warns at
+# install time and the server then dies at startup. This is a limitation of the
+# test fixture, not of the shipped Node server, whose own dependency tree
+# installs cleanly on Node 18.
+AGGREGATE_MOCK_MIN_NODE = 20
+
+
+def _node_major() -> int:
+    """Major version of the `node` on PATH, or 0 if it cannot be determined."""
+    try:
+        out = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=30)
+        return int(out.stdout.strip().lstrip("v").split(".")[0])
+    except Exception:
+        return 0
+
 
 def _port_open(host: str, port: int, timeout: float = 0.5) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -110,6 +126,13 @@ def aggregate_opcua_server() -> str:
     if not (AGGREGATE_MOCK_DIR / "node_modules").is_dir():
         pytest.skip(
             "aggregate mock not installed — run `npm install` in packages/mock-server-aggregate"
+        )
+
+    if _node_major() < AGGREGATE_MOCK_MIN_NODE:
+        pytest.skip(
+            f"aggregate mock needs Node >={AGGREGATE_MOCK_MIN_NODE} "
+            f"(node-opcua-aggregates pulls @peculiar/x509, which requires it); "
+            f"found Node {_node_major()}"
         )
 
     proc = subprocess.Popen(

@@ -70,7 +70,9 @@ The main mock cannot serve aggregates even in principle: python-opcua answers
 - Build the Node server once: `cd packages/server-node && npm install && npm run build`
   (Node tests are **skipped** if `build/index.js` is missing).
 - Install the aggregate mock once: `cd packages/mock-server-aggregate && npm install`
-  (aggregate tests are **skipped** if its `node_modules` is missing).
+  (aggregate tests are **skipped** if its `node_modules` is missing, or on Node <20 —
+  `node-opcua-aggregates` pulls dependencies that require it. This limits the test
+  fixture only; the shipped Node server supports Node 18+).
 
 ## Running
 

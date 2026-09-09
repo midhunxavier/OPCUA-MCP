@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- The Python server is now a real package (`src/opcua_mcp_server/`) split into
+  `config`, `contract`, `datetimes`, `capabilities` and `server`, instead of a
+  single 505-line flat module. The wheel now installs exactly one top-level name;
+  it previously dropped two files (`opcua_mcp_server.py` and
+  `opcua_mcp_server_contract.json`) directly into `site-packages`, which is why
+  the bundled contract needed a namespaced filename to avoid colliding with other
+  distributions. The contract now ships inside the package.
 - Unit-test tier (`tests/unit/` and `packages/server-node/test/`) covering the
   pure logic — ISO-8601 parsing, contract invariants, version manifests — with no
   OPC UA server and no MCP transport. 42 Python unit tests run in ~0.2s against

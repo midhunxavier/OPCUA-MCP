@@ -64,8 +64,8 @@ def test_capability_probe_is_well_formed(name):
 
 def test_python_server_sources_every_description_from_the_contract():
     """The Python server must not carry its own copy of any description."""
-    from opcua_mcp_server import _DESC
+    from opcua_mcp_server import DESC
 
-    assert set(_DESC) == set(TOOL_IDS)
+    assert set(DESC) == set(TOOL_IDS)
     for tool in TOOLS:
-        assert _DESC[tool["name"]] == tool["description"]
+        assert DESC[tool["name"]] == tool["description"]

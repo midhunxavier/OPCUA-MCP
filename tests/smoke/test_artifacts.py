@@ -153,11 +153,31 @@ def test_wheel_imports_outside_source_tree(wheel_venv, tmp_path):
         [
             str(python),
             "-c",
-            "import opcua_mcp_server as m; import json; print(json.dumps(sorted(m._DESC)))",
+            "import opcua_mcp_server as m; import json; print(json.dumps(sorted(m.DESC)))",
         ],
         cwd=tmp_path,
     )
     assert set(json.loads(proc.stdout)) >= CORE_TOOLS
+
+
+def test_wheel_does_not_pollute_site_packages(wheel_venv):
+    """The distribution must install exactly one importable top-level name.
+
+    The contract used to be force-included at the *wheel root*, so installing
+    dropped two top-level files into site-packages and the contract needed a
+    namespaced filename to avoid colliding with other distributions. It now ships
+    inside the package.
+    """
+    site_packages = next((wheel_venv.parent / "lib").glob("python*/site-packages"))
+    record = next(site_packages.glob("opcua_mcp_server-*.dist-info/RECORD")).read_text()
+
+    top_level = {line.split("/")[0] for line in record.splitlines() if line.strip()}
+    # Drop metadata and the console script, which RECORD lists as ../../../bin/...
+    importable = {t for t in top_level if not t.endswith(".dist-info") and t != ".."}
+
+    assert importable == {"opcua_mcp_server"}, (
+        f"wheel installs unexpected top-level entries: {sorted(importable)}"
+    )
 
 
 def test_wheel_console_script_installed(wheel_venv):

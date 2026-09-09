@@ -1,56 +1,29 @@
+"""The MCP server: lifecycle, tool registration, and the stdio entry point."""
+
+from __future__ import annotations
+
 import asyncio
-import json
-import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from opcua import Client
 from opcua.ua import NodeClass
 
-server_url = os.getenv("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
-
-
-def _load_contract() -> dict:
-    """Load the shared tool contract (single source of truth).
-
-    The canonical file is ``/contract/tools.json`` at the repo root, read directly
-    when running from the source tree (dev / editable installs / tests). When the
-    package is installed as a wheel the contract is bundled next to this module
-    (see the ``force-include`` in pyproject.toml), so the installed copy is found
-    there instead. Without the bundled copy a pip/uvx install would raise
-    FileNotFoundError on import, since parents[2] is not the repo root.
-    """
-    here = Path(__file__).resolve()
-    candidates = (
-        here.parent / "opcua_mcp_server_contract.json",  # bundled in the wheel
-        here.parents[2] / "contract" / "tools.json",  # repo-root source layout
-    )
-    for path in candidates:
-        if path.is_file():
-            return json.loads(path.read_text())
-    raise FileNotFoundError(
-        "Shared tool contract not found; looked in " + ", ".join(str(p) for p in candidates)
-    )
-
-
-# Shared tool contract so tool descriptions and capability node IDs stay in sync
-# with the Node server.
-_CONTRACT = _load_contract()
-_DESC = {t["name"]: t["description"] for t in _CONTRACT["tools"]}
-_HISTORY_NODE_ID = _CONTRACT["capabilities"]["history"]["nodeId"]
+from .capabilities import server_supports_history
+from .config import SERVER_URL
+from .contract import DESC
+from .datetimes import parse_iso_datetime
 
 
 # Manage the lifecycle of the OPC UA client connection
 @asynccontextmanager
 async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     """Handle OPC UA client connection lifecycle."""
-    client = Client(server_url)
+    client = Client(SERVER_URL)
     try:
         # Connect to OPC UA server synchronously, wrapped in a thread for async compatibility
         await asyncio.to_thread(client.connect)
@@ -85,7 +58,7 @@ mcp._mcp_server.version = _package_version()
 
 
 # Tool: Read the value of an OPC UA node
-@mcp.tool(description=_DESC["read_opcua_node"])
+@mcp.tool(description=DESC["read_opcua_node"])
 def read_opcua_node(node_id: str, ctx: Context) -> str:
     """
     Read the value of a specific OPC UA node.
@@ -101,23 +74,6 @@ def read_opcua_node(node_id: str, ctx: Context) -> str:
     node = client.get_node(node_id)
     value = node.get_value()  # Synchronous call to get node value
     return f"Node {node_id} value: {value}"
-
-
-def _parse_iso_datetime(value: str | None) -> datetime | None:
-    """Parse an optional ISO-8601 string into a datetime.
-
-    MCP delivers these as strings, so they are converted here before being handed
-    to the opcua client. Mirrors the Node server's ``toDate`` error wording so both
-    servers reject malformed input identically.
-    """
-    if value is None:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except (ValueError, TypeError):
-        raise ValueError(
-            f'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z'
-        ) from None
 
 
 # Tool: Read historical values of an OPC UA node.
@@ -149,8 +105,8 @@ def read_history_opcua_node(
     client = ctx.request_context.lifespan_context["opcua_client"]
     node = client.get_node(node_id)
     values = node.read_raw_history(
-        starttime=_parse_iso_datetime(start_time),
-        endtime=_parse_iso_datetime(end_time),
+        starttime=parse_iso_datetime(start_time),
+        endtime=parse_iso_datetime(end_time),
         numvalues=num_values,
     )
     return [
@@ -163,32 +119,15 @@ def read_history_opcua_node(
     ]
 
 
-def _server_supports_history(url: str) -> bool:
-    """Probe the server's AccessHistoryDataCapability (ns=0;i=11193).
-
-    Used to expose `read_history_opcua_node` only when the server actually
-    supports historical reads, matching the Node server's behaviour.
-    """
-    try:
-        probe = Client(url)
-        probe.connect()
-        try:
-            return bool(probe.get_node(_HISTORY_NODE_ID).get_value())
-        finally:
-            probe.disconnect()
-    except Exception:
-        return False
-
-
 # Conditionally register the history tool based on server capability.
-if _server_supports_history(server_url):
-    read_history_opcua_node = mcp.tool(description=_DESC["read_history_opcua_node"])(
+if server_supports_history(SERVER_URL):
+    read_history_opcua_node = mcp.tool(description=DESC["read_history_opcua_node"])(
         read_history_opcua_node
     )
 
 
 # Tool: Write a value to an OPC UA node
-@mcp.tool(description=_DESC["write_opcua_node"])
+@mcp.tool(description=DESC["write_opcua_node"])
 def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
     """
     Write a value to a specific OPC UA node.
@@ -219,7 +158,7 @@ def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
 
 
 # Tool: Browse the children of a specific OPC UA node
-@mcp.tool(description=_DESC["browse_opcua_node_children"])
+@mcp.tool(description=DESC["browse_opcua_node_children"])
 def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
     """
     Browse the children of a specific OPC UA node.
@@ -261,7 +200,7 @@ def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
 
 
 # Tool: Call an OPC UA method
-@mcp.tool(description=_DESC["call_opcua_method"])
+@mcp.tool(description=DESC["call_opcua_method"])
 def call_opcua_method(
     object_node_id: str, method_node_id: str, ctx: Context, arguments: list[Any] | None = None
 ) -> str:
@@ -321,7 +260,7 @@ def call_opcua_method(
 
 
 # Tool: Read multiple OPC UA nodes
-@mcp.tool(description=_DESC["read_multiple_opcua_nodes"])
+@mcp.tool(description=DESC["read_multiple_opcua_nodes"])
 def read_multiple_opcua_nodes(node_ids: list[str], ctx: Context) -> str:
     """
     Read the values of multiple OPC UA nodes in a single request.
@@ -351,7 +290,7 @@ def read_multiple_opcua_nodes(node_ids: list[str], ctx: Context) -> str:
 
 
 # Tool: Write multiple OPC UA nodes
-@mcp.tool(description=_DESC["write_multiple_opcua_nodes"])
+@mcp.tool(description=DESC["write_multiple_opcua_nodes"])
 def write_multiple_opcua_nodes(nodes_to_write: list[dict[str, Any]], ctx: Context) -> str:
     """
     Write values to multiple OPC UA nodes in a single request.
@@ -400,7 +339,7 @@ def write_multiple_opcua_nodes(nodes_to_write: list[dict[str, Any]], ctx: Contex
 
 
 # Tool: Get all variables information
-@mcp.tool(description=_DESC["get_all_variables"])
+@mcp.tool(description=DESC["get_all_variables"])
 def get_all_variables(ctx: Context) -> str:
     """
     Get all available variables from the OPC UA server, excluding those under
@@ -499,7 +438,3 @@ def get_all_variables(ctx: Context) -> str:
 def main() -> None:
     """Entry point for the `opcua-mcp-server` console script."""
     mcp.run(transport="stdio")
-
-
-if __name__ == "__main__":
-    main()

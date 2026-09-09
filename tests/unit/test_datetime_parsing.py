@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from opcua_mcp_server import _parse_iso_datetime
+from opcua_mcp_server import parse_iso_datetime
 
 # Must stay byte-identical to the Node server's `toDate` message.
 EXPECTED_ERROR = 'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z'
@@ -22,16 +22,16 @@ EXPECTED_ERROR = 'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17
 
 def test_none_passes_through():
     """None means 'unset' over MCP and must not become an error."""
-    assert _parse_iso_datetime(None) is None
+    assert parse_iso_datetime(None) is None
 
 
 def test_parses_utc_z_suffix():
-    assert _parse_iso_datetime("2026-04-23T17:40:00Z") == datetime(2026, 4, 23, 17, 40, tzinfo=UTC)
+    assert parse_iso_datetime("2026-04-23T17:40:00Z") == datetime(2026, 4, 23, 17, 40, tzinfo=UTC)
 
 
 def test_preserves_non_utc_offset():
     """An offset must shift the instant, not be silently dropped."""
-    parsed = _parse_iso_datetime("2026-04-23T19:40:00+02:00")
+    parsed = parse_iso_datetime("2026-04-23T19:40:00+02:00")
     assert parsed.astimezone(UTC) == datetime(2026, 4, 23, 17, 40, tzinfo=UTC)
 
 
@@ -47,12 +47,12 @@ def test_preserves_non_utc_offset():
 )
 def test_rejects_malformed_input_with_shared_wording(value):
     with pytest.raises(ValueError) as excinfo:
-        _parse_iso_datetime(value)
+        parse_iso_datetime(value)
     assert str(excinfo.value) == EXPECTED_ERROR.format(value=value)
 
 
 def test_error_does_not_leak_the_underlying_exception():
     """`raise ... from None` keeps the low-level message out of the model's view."""
     with pytest.raises(ValueError) as excinfo:
-        _parse_iso_datetime("nope")
+        parse_iso_datetime("nope")
     assert excinfo.value.__cause__ is None

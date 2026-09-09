@@ -12,7 +12,7 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 | Path | What it is |
 |------|------------|
 | `packages/mock-server/` | Mock "Industrial Control System" OPC UA server (the simulated PLC/sensors) |
-| `packages/server-python/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa) |
+| `packages/server-python/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa), a `src/` package |
 | `packages/server-node/` | **Node** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
 | `tests/` | End-to-end pytest suite driving both servers via the `mcp` SDK |
 | `docs/` | Usage and testing docs (`examples.md`, `testing.md`) |
@@ -88,7 +88,7 @@ The tool surface is defined once in [`contract/tools.json`](contract/tools.json)
 
 1. **Contract** (`contract/tools.json`): add an entry under `tools` with its `name`, `description`, `inputSchema` (JSON Schema), and `capability` (`null`, or `"history"`/`"aggregate"` if it depends on a server capability).
 2. **Node** (`packages/server-node/src/index.ts`): add a `case "foo"` to the `CallToolRequestSchema` switch and implement the handler. You do **not** edit `tools/list` — it is generated from the contract. Run `npm run build` (this also stages the contract and version into `build/`).
-3. **Python** (`packages/server-python/opcua_mcp_server.py`): add a function decorated with `@mcp.tool(description=_DESC["foo"])`, with typed args (FastMCP derives the input schema from them — keep it matching the contract) and `ctx: Context`. For a capability-gated tool, register it conditionally like `read_history_opcua_node`.
+3. **Python** (`packages/server-python/src/opcua_mcp_server/server.py`): add a function decorated with `@mcp.tool(description=_DESC["foo"])`, with typed args (FastMCP derives the input schema from them — keep it matching the contract) and `ctx: Context`. For a capability-gated tool, register it conditionally like `read_history_opcua_node`.
 4. **Test**: add an end-to-end test in `tests/e2e/test_mcp_e2e.py` (it runs against both servers). The contract-parity test will automatically check that both servers advertise the new tool with the contract's description and parameters.
 5. **Document it** in `docs/examples.md` (the central per-tool reference).
 

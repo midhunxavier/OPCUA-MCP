@@ -44,7 +44,7 @@ ends with a green test suite — the same working style as
 | — | Name-claim pre-release (optional) | irreversible | ⏸ awaiting decision |
 | 3 | Quality gates (ruff / prettier / tsc) | low, noisy diff | ✅ done |
 | 4 | Unit-test layer | low | ✅ done |
-| 5 | Packaging correctness + module split | **high** | 5c ✅ done; 5a/5b ☐ |
+| 5 | Packaging correctness + module split | **high** | 5a/5c ✅ done; 5b ☐ |
 | 6 | Python floor + CI matrix | medium | ☐ |
 | 7 | Aggregate parity in Python | medium | ☐ |
 | 8 | Docs consolidation | low | ☐ |

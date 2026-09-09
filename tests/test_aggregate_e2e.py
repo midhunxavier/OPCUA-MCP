@@ -1,0 +1,178 @@
+"""End-to-end tests for `read_aggregate_opcua_node` on both MCP servers.
+
+These run against the aggregate-capable mock (`packages/mock-server-aggregate`,
+:4841) rather than the main mock, which deliberately advertises no aggregate
+functions. The negative case — the tool staying hidden when the server cannot
+support it — lives in ``test_mcp_e2e.py`` and runs against the main mock.
+
+The mock ramps its Temperature node at a known rate, so aggregate output is
+checked arithmetically rather than merely for non-emptiness: with a +1.0/second
+ramp, consecutive Average buckets must differ by exactly the processing interval
+expressed in seconds.
+
+Run:
+    cd tests && uv run pytest -v test_aggregate_e2e.py
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from conftest import AGGREGATE_NODE_ID, AGGREGATE_RAMP_PER_SECOND
+from test_mcp_e2e import NPX_BUILD, _server_params, connect, text_of, tool_names
+
+AGGREGATE_TOOL = "read_aggregate_opcua_node"
+
+# A deliberately non-UTC zone for the regression test below. UTC+5:30 is chosen
+# because it is not a whole number of hours, so a naive-local-time bug cannot be
+# mistaken for an off-by-one-hour DST artefact.
+NON_UTC_TZ = "Asia/Kolkata"
+
+
+@pytest.fixture(params=["python", "npx"])
+def agg_server(request, aggregate_opcua_server):
+    """``(impl_name, StdioServerParameters)`` pointed at the aggregate mock."""
+    impl = request.param
+    if impl == "npx" and not NPX_BUILD.exists():
+        pytest.skip(
+            "npx server not built — run `npm install && npm run build` in "
+            "packages/server-node"
+        )
+    return impl, _server_params(impl, aggregate_opcua_server)
+
+
+# --- helpers -------------------------------------------------------------------
+
+def iso_utc(offset_seconds: int = 0) -> str:
+    """An ISO-8601 UTC timestamp, optionally offset into the past."""
+    moment = datetime.now(timezone.utc) - timedelta(seconds=offset_seconds)
+    return moment.isoformat().replace("+00:00", "Z")
+
+
+def aggregate_values(result, impl: str) -> list[float | None]:
+    """Extract the per-bucket values from an aggregate result.
+
+    The two servers return different shapes for the history family (see #23), so
+    this normalises both to a list of floats with ``None`` for empty buckets.
+    """
+    if impl == "python":
+        values: list[float | None] = []
+        for block in result.content:
+            text = getattr(block, "text", None)
+            if not text or not text.strip().startswith("{"):
+                continue
+            raw = json.loads(text).get("value")
+            values.append(None if raw in (None, "None") else float(raw))
+        return values
+
+    # npx returns a single JSON array of DataValues; empty buckets carry no value.
+    values = []
+    for data_value in json.loads(text_of(result)):
+        raw = (data_value.get("value") or {}).get("value")
+        values.append(None if raw is None else float(raw))
+    return values
+
+
+async def read_average(session, impl, *, window_seconds, interval_ms, end_time="explicit"):
+    """Read Average over the last ``window_seconds``, bucketed by ``interval_ms``."""
+    arguments = {
+        "node_id": AGGREGATE_NODE_ID,
+        "start_time": iso_utc(window_seconds),
+        "aggregate_function": "Average",
+        "processing_interval": interval_ms,
+    }
+    if end_time == "explicit":
+        arguments["end_time"] = iso_utc()
+    result = await session.call_tool(AGGREGATE_TOOL, arguments)
+    return result, aggregate_values(result, impl)
+
+
+# --- tests ---------------------------------------------------------------------
+
+async def test_aggregate_tool_exposed_when_supported(agg_server):
+    """The mock advertises aggregate functions, so both servers must expose the tool."""
+    impl, params = agg_server
+    async with connect(params) as session:
+        names = await tool_names(session)
+    assert AGGREGATE_TOOL in names, f"{impl}: aggregate tool missing despite server support"
+
+
+async def test_aggregate_average_values_are_correct(agg_server):
+    """Averages over a known linear ramp must advance by the interval, in seconds.
+
+    This is the check that actually exercises `ReadProcessedDetails`: a tool that
+    returned records of the wrong node, wrong window, or unaggregated raw history
+    would not produce this exact progression.
+    """
+    impl, params = agg_server
+    interval_ms = 5000
+    async with connect(params) as session:
+        result, values = await read_average(
+            session, impl, window_seconds=20, interval_ms=interval_ms
+        )
+
+    assert not result.isError, text_of(result)
+    populated = [v for v in values if v is not None]
+    assert len(populated) >= 3, f"{impl}: too few populated buckets: {values}"
+
+    # Drop the final bucket: it can be clipped by the end of the window and so
+    # average over a shorter span than the rest.
+    expected_delta = AGGREGATE_RAMP_PER_SECOND * interval_ms / 1000
+    deltas = [round(b - a, 3) for a, b in zip(populated, populated[1:])][:-1]
+    assert deltas, f"{impl}: not enough buckets to compare: {values}"
+    assert all(abs(d - expected_delta) < 0.75 for d in deltas), (
+        f"{impl}: expected ~{expected_delta} per {interval_ms}ms bucket, got {deltas}"
+    )
+
+
+async def test_aggregate_default_end_time_is_utc(agg_server):
+    """Omitting `end_time` must not overshoot the window on a non-UTC host.
+
+    Regression test for #24: the Python server defaulted `EndTime` to a naive
+    local `datetime.now()` while parsing `start_time` as aware UTC, so on a host
+    at UTC+X the window ran X hours into the future and the response was padded
+    with one empty bucket per processing interval in between.
+
+    The server is launched under an explicit non-UTC ``TZ`` so this fails on UTC
+    CI runners too, where the bug would otherwise be invisible.
+    """
+    impl, params = agg_server
+    window_seconds, interval_ms = 60, 10_000
+    skewed = params.model_copy(update={"env": {**(params.env or {}), "TZ": NON_UTC_TZ}})
+
+    async with connect(skewed) as session:
+        result, values = await read_average(
+            session, impl, window_seconds=window_seconds, interval_ms=interval_ms,
+            end_time="default",
+        )
+
+    assert not result.isError, text_of(result)
+    # A 60s window in 10s buckets is 6 buckets, plus at most one for the boundary.
+    # Under the bug this was 727 on a UTC+2 host and would be ~1986 at UTC+5:30.
+    max_buckets = window_seconds * 1000 // interval_ms + 2
+    assert len(values) <= max_buckets, (
+        f"{impl}: default end_time produced {len(values)} buckets for a "
+        f"{window_seconds}s window (expected <= {max_buckets}) — "
+        f"EndTime is likely naive local time rather than UTC"
+    )
+
+
+async def test_aggregate_rejects_unknown_function(agg_server):
+    """An unsupported aggregate name is rejected, listing what the server offers."""
+    impl, params = agg_server
+    async with connect(params) as session:
+        result = await session.call_tool(
+            AGGREGATE_TOOL,
+            {
+                "node_id": AGGREGATE_NODE_ID,
+                "start_time": iso_utc(60),
+                "aggregate_function": "NotAnAggregate",
+                "processing_interval": 10_000,
+            },
+        )
+    text = text_of(result)
+    assert "Invalid aggregate function" in text, f"{impl}: unexpected error: {text}"
+    assert "Average" in text, f"{impl}: supported functions not listed: {text}"

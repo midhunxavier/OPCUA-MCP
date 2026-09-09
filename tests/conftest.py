@@ -1,6 +1,6 @@
 """Shared pytest fixtures for the OPC UA MCP end-to-end suite.
 
-The suite drives the *actual* MCP servers (Python and npx) over stdio using the
+The suite drives the *actual* MCP servers (Python and Node) over stdio using the
 official `mcp` client SDK, pointed at the mock industrial OPC UA server. A single
 session-scoped fixture makes sure a mock server is available: if one is already
 listening on :4840 it is reused, otherwise one is started for the test session.
@@ -22,9 +22,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SERVER_URL = os.environ.get(
-    "OPCUA_SERVER_URL", "opc.tcp://localhost:4840/freeopcua/server/"
-)
+SERVER_URL = os.environ.get("OPCUA_SERVER_URL", "opc.tcp://localhost:4840/freeopcua/server/")
 HOST = "localhost"
 PORT = 4840
 
@@ -48,6 +46,22 @@ AGGREGATE_NODE_ID = "ns=1;i=1001"
 # The aggregate tests read back windows of up to ~30s, so more warmup is needed
 # here than for the raw-history test against the main mock.
 AGGREGATE_WARMUP_SECONDS = 20
+
+# The aggregate mock pulls `node-opcua-aggregates`, whose transitive deps
+# (@peculiar/x509, @ster5/global-mutex) require Node 20 — npm only warns at
+# install time and the server then dies at startup. This is a limitation of the
+# test fixture, not of the shipped Node server, whose own dependency tree
+# installs cleanly on Node 18.
+AGGREGATE_MOCK_MIN_NODE = 20
+
+
+def _node_major() -> int:
+    """Major version of the `node` on PATH, or 0 if it cannot be determined."""
+    try:
+        out = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=30)
+        return int(out.stdout.strip().lstrip("v").split(".")[0])
+    except Exception:
+        return 0
 
 
 def _port_open(host: str, port: int, timeout: float = 0.5) -> bool:
@@ -100,7 +114,7 @@ def aggregate_opcua_server() -> str:
 
     Reuses an instance already listening on :4841, otherwise starts one for the
     session. Skips the dependent tests when the mock's dependencies are not
-    installed, mirroring how the npx tests skip on a missing build.
+    installed, mirroring how the Node tests skip on a missing build.
 
     Yields the server endpoint URL.
     """
@@ -111,8 +125,14 @@ def aggregate_opcua_server() -> str:
 
     if not (AGGREGATE_MOCK_DIR / "node_modules").is_dir():
         pytest.skip(
-            "aggregate mock not installed — run `npm install` in "
-            "packages/mock-server-aggregate"
+            "aggregate mock not installed — run `npm install` in packages/mock-server-aggregate"
+        )
+
+    if _node_major() < AGGREGATE_MOCK_MIN_NODE:
+        pytest.skip(
+            f"aggregate mock needs Node >={AGGREGATE_MOCK_MIN_NODE} "
+            f"(node-opcua-aggregates pulls @peculiar/x509, which requires it); "
+            f"found Node {_node_major()}"
         )
 
     proc = subprocess.Popen(

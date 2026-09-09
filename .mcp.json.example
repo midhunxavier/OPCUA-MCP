@@ -14,7 +14,7 @@
         "OPCUA_SERVER_URL": "opc.tcp://localhost:4840/freeopcua/server/"
       }
     },
-    "opcua-npx": {
+    "opcua-node": {
       "type": "stdio",
       "command": "node",
       "args": [

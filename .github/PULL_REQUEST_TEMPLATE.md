@@ -12,7 +12,7 @@
 ## Affected implementation(s)
 
 - [ ] Python (`opcua-mcp-server`)
-- [ ] npx / TypeScript (`opcua-mcp-server`)
+- [ ] Node / TypeScript (`opcua-mcp-server`)
 - [ ] Tests / docs / CI only
 
 ## Checklist

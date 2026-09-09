@@ -10,16 +10,16 @@
 [![License: MIT](https://img.shields.io/github/license/midhunxavier/OPCUA-MCP)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/midhunxavier/OPCUA-MCP?style=social)](https://github.com/midhunxavier/OPCUA-MCP)
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org)
 [![Node.js 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
+[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Architecture](docs/architecture.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
 
 </div>
 
-![OPC UA MCP Server Screenshot](Media/ss.png)
+![OPC UA MCP Server Screenshot](docs/assets/screenshot.png)
 
 ## Overview
 
@@ -30,13 +30,13 @@ and read history. Pick whichever runtime fits your stack.
 
 ```mermaid
 flowchart LR
-    A["AI client<br/>(Claude Desktop / Code / Cursor)"] -->|MCP over stdio| B["OPC UA MCP Server<br/>(Python or npx)"]
+    A["AI client<br/>(Claude Desktop / Code / Cursor)"] -->|MCP over stdio| B["OPC UA MCP Server<br/>(Python or Node)"]
     B -->|OPC UA| C["OPC UA Server<br/>(PLC / SCADA / mock)"]
 ```
 
 ## Quick Start
 
-The fastest path — the npx server, no clone required:
+The fastest path — the Node server via `npx`, no clone required:
 
 ```bash
 npx opcua-mcp-server
@@ -47,7 +47,7 @@ Then point your MCP client at it (see [Configuration](#configuration)):
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
@@ -120,19 +120,21 @@ Result: "Found 15 variables:
 
 ## Implementation Languages
 
-### Python Version (`opcua-mcp-server`)
-- **Language**: Python 3.13+
-- **Framework**: FastMCP
-- **OPC UA Library**: `opcua` (FreeOpcUa)
-- **Transport**: STDIO
-- **Entry Point**: `opcua_mcp_server.py` (console script: `opcua-mcp-server`)
+Both are published as **`opcua-mcp-server`** (npm and PyPI), speak MCP over
+**stdio**, and expose the identical tool surface. Pick whichever fits your stack.
 
-### Node Version (`opcua-mcp-server`)
-- **Language**: TypeScript/Node.js
-- **Framework**: @modelcontextprotocol/sdk
-- **OPC UA Library**: `node-opcua`
-- **Transport**: STDIO
-- **Entry Point**: `src/index.ts` (compiled to `build/index.js`)
+| | Python | Node |
+|---|---|---|
+| Requires | Python 3.10+ | Node 18+ |
+| Framework | FastMCP | `@modelcontextprotocol/sdk` |
+| OPC UA library | `opcua` (FreeOpcUa) | `node-opcua` |
+| Source | `packages/server-python/` | `packages/server-node/` |
+| Run | `uvx opcua-mcp-server` | `npx opcua-mcp-server` |
+
+Exact dependency versions live in the manifests
+([`pyproject.toml`](packages/server-python/pyproject.toml),
+[`package.json`](packages/server-node/package.json)) rather than being restated
+here, where they would drift.
 
 ## Tools
 
@@ -149,7 +151,7 @@ uv sync --all-packages
 uv run --no-sync opcua-mcp-server
 ```
 
-### NPX Version
+### Node Version
 ```bash
 # Direct usage (recommended)
 npx opcua-mcp-server
@@ -191,11 +193,11 @@ Both versions use the same environment variable:
 }
 ```
 
-### NPX Configuration Example
+### Node Configuration Example
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {
@@ -205,21 +207,6 @@ Both versions use the same environment variable:
   }
 }
 ```
-
-## Dependencies
-
-### Python Version
-- `mcp[cli]>=1.9.1`: MCP framework
-- `opcua>=0.98.13`: OPC UA client library
-- `cryptography>=45.0.2`: Security support
-- `httpx>=0.28.1`: HTTP client
-
-### NPX Version
-- `@modelcontextprotocol/sdk`: MCP SDK for Node.js
-- `node-opcua`: Comprehensive OPC UA library
-- `typescript`: TypeScript compiler
-- `@types/node`: Node.js type definitions
-
 
 ## Testing
 

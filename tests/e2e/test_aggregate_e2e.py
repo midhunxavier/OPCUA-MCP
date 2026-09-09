@@ -11,18 +11,18 @@ ramp, consecutive Average buckets must differ by exactly the processing interval
 expressed in seconds.
 
 Run:
-    cd tests && uv run pytest -v test_aggregate_e2e.py
+    cd tests && uv run pytest -v e2e/test_aggregate_e2e.py
 """
 
 from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from itertools import pairwise
 
 import pytest
-
 from conftest import AGGREGATE_NODE_ID, AGGREGATE_RAMP_PER_SECOND
-from test_mcp_e2e import NPX_BUILD, _server_params, connect, text_of, tool_names
+from test_mcp_e2e import NODE_BUILD, _server_params, connect, text_of, tool_names
 
 AGGREGATE_TOOL = "read_aggregate_opcua_node"
 
@@ -32,19 +32,19 @@ AGGREGATE_TOOL = "read_aggregate_opcua_node"
 NON_UTC_TZ = "Asia/Kolkata"
 
 
-@pytest.fixture(params=["python", "npx"])
+@pytest.fixture(params=["python", "node"])
 def agg_server(request, aggregate_opcua_server):
     """``(impl_name, StdioServerParameters)`` pointed at the aggregate mock."""
     impl = request.param
-    if impl == "npx" and not NPX_BUILD.exists():
+    if impl == "node" and not NODE_BUILD.exists():
         pytest.skip(
-            "npx server not built — run `npm install && npm run build` in "
-            "packages/server-node"
+            "Node server not built — run `npm install && npm run build` in packages/server-node"
         )
     return impl, _server_params(impl, aggregate_opcua_server)
 
 
 # --- helpers -------------------------------------------------------------------
+
 
 def iso_utc(offset_seconds: int = 0) -> str:
     """An ISO-8601 UTC timestamp, optionally offset into the past."""
@@ -68,7 +68,7 @@ def aggregate_values(result, impl: str) -> list[float | None]:
             values.append(None if raw in (None, "None") else float(raw))
         return values
 
-    # npx returns a single JSON array of DataValues; empty buckets carry no value.
+    # Node returns a single JSON array of DataValues; empty buckets carry no value.
     values = []
     for data_value in json.loads(text_of(result)):
         raw = (data_value.get("value") or {}).get("value")
@@ -91,6 +91,7 @@ async def read_average(session, impl, *, window_seconds, interval_ms, end_time="
 
 
 # --- tests ---------------------------------------------------------------------
+
 
 async def test_aggregate_tool_exposed_when_supported(agg_server):
     """The mock advertises aggregate functions, so both servers must expose the tool."""
@@ -121,7 +122,7 @@ async def test_aggregate_average_values_are_correct(agg_server):
     # Drop the final bucket: it can be clipped by the end of the window and so
     # average over a shorter span than the rest.
     expected_delta = AGGREGATE_RAMP_PER_SECOND * interval_ms / 1000
-    deltas = [round(b - a, 3) for a, b in zip(populated, populated[1:])][:-1]
+    deltas = [round(b - a, 3) for a, b in pairwise(populated)][:-1]
     assert deltas, f"{impl}: not enough buckets to compare: {values}"
     assert all(abs(d - expected_delta) < 0.75 for d in deltas), (
         f"{impl}: expected ~{expected_delta} per {interval_ms}ms bucket, got {deltas}"
@@ -145,7 +146,10 @@ async def test_aggregate_default_end_time_is_utc(agg_server):
 
     async with connect(skewed) as session:
         result, values = await read_average(
-            session, impl, window_seconds=window_seconds, interval_ms=interval_ms,
+            session,
+            impl,
+            window_seconds=window_seconds,
+            interval_ms=interval_ms,
             end_time="default",
         )
 

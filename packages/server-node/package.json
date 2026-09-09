@@ -1,6 +1,6 @@
 {
   "name": "opcua-mcp-server",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MCP server for OPC UA control - Model Context Protocol server for OPC UA operations",
   "main": "build/index.js",
   "type": "module",
@@ -9,10 +9,14 @@
     "opcua-mcp": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-contract.mjs",
+    "build": "tsc && node scripts/prepare-build.mjs",
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -42,6 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.0.0"
   },
   "engines": {
@@ -51,4 +56,4 @@
     "build/**/*",
     "README.md"
   ]
-} 
+}

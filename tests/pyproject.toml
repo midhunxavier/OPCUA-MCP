@@ -1,16 +1,35 @@
 [project]
 name = "opcua-mcp-tests"
 version = "0.1.0"
-description = "End-to-end test suite for the OPC UA MCP servers (Python + npx)"
-requires-python = ">=3.13"
+description = "Test suite for the OPC UA MCP servers (Python + Node)"
+requires-python = ">=3.10"
 dependencies = [
-    "mcp[cli]>=1.9.1",
+    # Upper bound is load-bearing: mcp 2.x renamed FastMCP to MCPServer, so an
+    # unbounded install resolves 2.x and crashes on import. Migrating to the 2.x
+    # API is tracked separately.
+    "mcp[cli]>=1.9.1,<2",
     "opcua>=0.98.13",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "anyio>=4.0",
+    # tomllib is stdlib from 3.11; the tests read pyproject files to check
+    # version parity, so older interpreters need the backport.
+    "tomli>=2; python_version<'3.11'",
 ]
+
+# Not a distributable: this is a test suite, not a package. Without this, the
+# build backend tries to package unit/, e2e/ and smoke/ as three top-level
+# packages and fails. uv still resolves and installs the dependencies below.
+[tool.uv]
+package = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "-ra"
+# Smoke tests build and install real artifacts, so they are slow and opt-in.
+# CI runs them as their own job with `-m smoke`.
+addopts = "-ra -m 'not smoke'"
+# Lets test modules import `conftest` and each other by name from subdirectories.
+pythonpath = ["."]
+markers = [
+    "smoke: builds and installs the packaged artifacts (slow; deselected by default)",
+]

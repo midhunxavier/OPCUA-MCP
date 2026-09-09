@@ -1,3 +1,12 @@
+> **Archived — historical record, not current documentation.**
+>
+> This plan was executed and is kept for context. Parts of it are now inaccurate:
+> it marks Phase 2 complete while describing a `src/opcua_mcp_server/` package
+> that was only actually created later (see
+> [`ROADMAP-0.2.0.md`](../ROADMAP-0.2.0.md) phase 5a), and the npm rename it
+> describes had not been published at the time of writing. For the current
+> layout see [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+
 # Restructure Plan: OPC UA MCP
 
 A phased plan to turn the repo into a clean monorepo, eliminate tool-definition

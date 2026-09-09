@@ -15,9 +15,8 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from conftest import ROOT
-from test_mcp_e2e import _server_params, connect, NPX_BUILD
+from test_mcp_e2e import NODE_BUILD, _server_params, connect
 
 CONTRACT = json.loads((ROOT / "contract" / "tools.json").read_text())
 
@@ -32,11 +31,11 @@ def _props_required(schema: dict) -> tuple[set, set]:
     return set(schema.get("properties", {})), set(schema.get("required", []))
 
 
-@pytest.fixture(params=["python", "npx"])
+@pytest.fixture(params=["python", "node"])
 def impl_params(request, opcua_server):
     impl = request.param
-    if impl == "npx" and not NPX_BUILD.exists():
-        pytest.skip("npx server not built")
+    if impl == "node" and not NODE_BUILD.exists():
+        pytest.skip("Node server not built")
     return impl, _server_params(impl, opcua_server)
 
 
@@ -66,6 +65,4 @@ async def test_servers_match_contract(impl_params):
         assert got_props == want_props, (
             f"{impl}/{name}: params {got_props} != contract {want_props}"
         )
-        assert got_req == want_req, (
-            f"{impl}/{name}: required {got_req} != contract {want_req}"
-        )
+        assert got_req == want_req, f"{impl}/{name}: required {got_req} != contract {want_req}"

@@ -8,7 +8,7 @@ assignees: ""
 
 **Which implementation?**
 - [ ] Python (`opcua-mcp-server`)
-- [ ] npx / TypeScript (`opcua-mcp-server`)
+- [ ] Node / TypeScript (`opcua-mcp-server`)
 
 **Describe the bug**
 A clear and concise description of what the bug is.

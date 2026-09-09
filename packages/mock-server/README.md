@@ -159,7 +159,7 @@ The server supports multiple security policies:
 
 ### File Structure
 - `opcua_local_server.py` - Main server implementation and entry point
-- `client_example.py` - Example OPC UA client
+- `examples/mock_server_client_demo.py` (repo root) - Example OPC UA client
 - `pyproject.toml` - Project configuration and dependencies
 
 ### Extending the System

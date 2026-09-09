@@ -5,7 +5,7 @@ A Node / TypeScript Model Context Protocol (MCP) server for OPC UA operations, r
 ## Features
 
 - **Read OPC UA Nodes**: Read values from individual or multiple OPC UA nodes
-- **Write OPC UA Nodes**: Write values to individual or multiple OPC UA nodes  
+- **Write OPC UA Nodes**: Write values to individual or multiple OPC UA nodes
 - **Browse Node Children**: Explore the OPC UA address space by browsing node children
 - **Call OPC UA Methods**: Execute methods on OPC UA objects with parameters
 - **Batch Operations**: Perform multiple read/write operations in single requests
@@ -49,6 +49,7 @@ The server connects to an OPC UA server using the following environment variable
 - `OPCUA_SERVER_URL`: The OPC UA server endpoint (default: `opc.tcp://localhost:4840`)
 
 Example:
+
 ```bash
 OPCUA_SERVER_URL=opc.tcp://192.168.1.100:4840 npx opcua-mcp-server
 ```
@@ -68,7 +69,7 @@ Add to your Cursor settings:
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {
@@ -86,7 +87,7 @@ Add to your Claude Desktop configuration file:
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {
@@ -102,12 +103,14 @@ Add to your Claude Desktop configuration file:
 Once configured, you can ask Claude to perform real-world OPC UA operations:
 
 ### Reading Sensor Values
+
 - "What is the current temperature reading from the reactor vessel?"
 - "Check the pressure level in Tank A"
 - "Read all temperature sensors in the cooling system"
 - "Get the current flow rate on production line B"
 
 ### Controlling Equipment
+
 - "Turn on the conveyor motor"
 - "Set the mixer speed to 80 RPM"
 - "Open valve V-101 to 75% position"
@@ -115,12 +118,14 @@ Once configured, you can ask Claude to perform real-world OPC UA operations:
 - "Set the heating element to 150°C"
 
 ### Production Operations
+
 - "Start production on line 1 with rate 100 units/hour"
 - "Stop all motors in emergency mode"
 - "Initialize the batch reactor with recipe A"
 - "Begin the cleaning cycle for Tank B"
 
 ### System Monitoring
+
 - "Show me all alarm states in the system"
 - "Read all sensor values from the water treatment plant"
 - "Check the status of all pumps and motors"
@@ -130,6 +135,7 @@ Once configured, you can ask Claude to perform real-world OPC UA operations:
 - "List all process variables with their current values"
 
 ### Real Example Scenarios
+
 ```
 User: "What's the temperature in reactor R-101?"
 Assistant: I'll read the temperature sensor for reactor R-101.
@@ -166,6 +172,7 @@ Result: "Found 15 variables:
 ## Error Handling
 
 The server provides detailed error messages for:
+
 - Connection failures
 - Invalid node IDs
 - Type conversion errors
@@ -180,7 +187,7 @@ The server provides detailed error messages for:
 
 ## Contributing
 
-We welcome contributions to improve the OPC UA MCP Server! 
+We welcome contributions to improve the OPC UA MCP Server!
 
 **Repository**: [https://github.com/midhunxavier/OPCUA-MCP](https://github.com/midhunxavier/OPCUA-MCP)
 
@@ -203,8 +210,9 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
+
 - Open an issue on [GitHub](https://github.com/midhunxavier/OPCUA-MCP/issues)
 - Check the OPC UA server connectivity
 - Verify node IDs are correct
 - Ensure proper permissions for OPC UA operations
-- Review server logs for detailed error information 
+- Review server logs for detailed error information

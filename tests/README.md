@@ -1,10 +1,34 @@
-# OPC UA MCP — End-to-End Test Suite
+# OPC UA MCP — Test Suite
 
-Drives the **actual** MCP servers (Python and npx) over stdio with the official
-`mcp` client SDK, against the mock industrial OPC UA server. Every test runs
-against **both** server implementations.
+Three tiers, fastest first. Pick the narrowest one that covers your change.
 
-## What it covers
+| Tier | Directory | Needs | Time | What it is for |
+|------|-----------|-------|------|----------------|
+| **unit** | `unit/` | nothing | <1s | Pure logic: ISO-8601 parsing, contract invariants, version manifests |
+| **e2e** | `e2e/` | mock OPC UA server + built Node server | ~50s | Drives both real servers over stdio via the `mcp` client SDK |
+| **smoke** | `smoke/` | npm + uv | ~20s | Builds and installs the real npm tarball and Python wheel, then drives the *installed* entry points |
+
+```bash
+uv run --no-sync pytest unit/         # fast inner loop
+uv run --no-sync pytest               # unit + e2e (smoke is deselected by default)
+uv run --no-sync pytest -m smoke smoke/
+```
+
+The Node server has its own unit tests, run separately:
+
+```bash
+cd packages/server-node && npm run build && npm test
+```
+
+**Why the smoke tier exists:** everything else runs from the source tree, where
+relative paths happen to resolve and dependencies come from `uv.lock`. Users get
+a tarball or a wheel. That gap has shipped real bugs — a wheel that raised
+`FileNotFoundError` on import, and an unbounded `mcp` dependency that resolved to
+a breaking major on any fresh install. Both were invisible to the e2e suite.
+
+## What the e2e tier covers
+
+Every test runs against **both** server implementations.
 
 | Test | What it verifies |
 |------|------------------|
@@ -43,10 +67,12 @@ The main mock cannot serve aggregates even in principle: python-opcua answers
 
 - `uv`, `node` (>=18), `npm`
 - Set up the workspace once (from the repo root): `uv sync --all-packages`
-- Build the npx server once: `cd packages/server-node && npm install && npm run build`
-  (npx tests are **skipped** if `build/index.js` is missing).
+- Build the Node server once: `cd packages/server-node && npm install && npm run build`
+  (Node tests are **skipped** if `build/index.js` is missing).
 - Install the aggregate mock once: `cd packages/mock-server-aggregate && npm install`
-  (aggregate tests are **skipped** if its `node_modules` is missing).
+  (aggregate tests are **skipped** if its `node_modules` is missing, or on Node <20 —
+  `node-opcua-aggregates` pulls dependencies that require it. This limits the test
+  fixture only; the shipped Node server supports Node 18+).
 
 ## Running
 
@@ -55,9 +81,13 @@ cd tests
 uv run --no-sync pytest -v
 ```
 
-The suite reuses mock OPC UA servers already listening on `:4840` and `:4841`; if
-none is running it starts them for the session (and waits a few seconds for
-history to accumulate). To force specific endpoints:
+`pytest` runs the unit and e2e tiers; smoke is deselected by default via
+`addopts = "-ra -m 'not smoke'"` because it builds and installs packages.
+
+The suite reuses mock OPC UA servers already listening on `:4840` (the main mock)
+and `:4841` (the aggregate-capable mock); if none is running it starts them for
+the session (and waits a few seconds for history to accumulate). To force
+specific endpoints:
 
 ```bash
 OPCUA_SERVER_URL="opc.tcp://localhost:4840/freeopcua/server/" uv run --no-sync pytest -v
@@ -67,9 +97,12 @@ OPCUA_AGGREGATE_SERVER_URL="opc.tcp://localhost:4841/UA/Aggregate" uv run --no-s
 Select a single implementation:
 
 ```bash
-uv run --no-sync pytest -v -k python
-uv run --no-sync pytest -v -k npx
+uv run --no-sync pytest -v -k "[python]"
+uv run --no-sync pytest -v -k "[node]"
 ```
+
+The brackets matter: they match the parametrisation id. A plain `-k node` would
+also match test *names* like `test_read_opcua_node`.
 
 ## Notes
 

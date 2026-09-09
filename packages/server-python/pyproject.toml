@@ -1,13 +1,16 @@
 [project]
 name = "opcua-mcp-server"
-version = "0.1.2"
+version = "0.2.0"
 description = "MCP server exposing OPC UA read/write/browse/method/history tools (FastMCP + python-opcua)."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "cryptography>=45.0.2",
     "httpx>=0.28.1",
-    "mcp[cli]>=1.9.1",
+    # Upper bound is load-bearing: mcp 2.x renamed FastMCP to MCPServer, so an
+    # unbounded install resolves 2.x and crashes on import. Migrating to the 2.x
+    # API is tracked separately.
+    "mcp[cli]>=1.9.1,<2",
     "opcua>=0.98.13",
 ]
 
@@ -19,10 +22,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["opcua_mcp_server.py"]
+packages = ["src/opcua_mcp_server"]
 
-# Bundle the shared tool contract next to the module so a pip/uvx-installed wheel
-# is self-contained (the canonical source lives at the repo root /contract). The
-# namespaced filename avoids colliding with other distributions at the install root.
+# Bundle the shared tool contract *inside* the package so a pip/uvx-installed
+# wheel is self-contained. The canonical source stays at the repo root
+# (/contract/tools.json); see contract.py for the resolution order.
+#
+# Placing it inside the package — rather than at the wheel root, as this
+# previously did — keeps the distribution from adding top-level files to
+# site-packages, which is why the old copy needed a namespaced filename to avoid
+# colliding with other distributions.
 [tool.hatch.build.targets.wheel.force-include]
-"../../contract/tools.json" = "opcua_mcp_server_contract.json"
+"../../contract/tools.json" = "opcua_mcp_server/tools.json"

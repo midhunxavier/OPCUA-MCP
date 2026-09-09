@@ -1,14 +1,15 @@
 """End-to-end tests for the OPC UA MCP servers.
 
-Each test runs against BOTH the Python and the npx MCP server (parameterised via
+Each test runs against BOTH the Python and the Node MCP server (parameterised via
 the ``mcp_session`` fixture), driving them over stdio with the official ``mcp``
 client SDK, against the mock industrial OPC UA server.
 
 Run:
     cd tests && uv run pytest -v
-    # only one implementation:
-    cd tests && uv run pytest -v -k python
-    cd tests && uv run pytest -v -k npx
+    # only one implementation (brackets match the parametrisation id, not
+    # test names — plain `-k node` would also match `test_read_opcua_node`):
+    cd tests && uv run pytest -v -k "[python]"
+    cd tests && uv run pytest -v -k "[node]"
 """
 
 from __future__ import annotations
@@ -17,13 +18,11 @@ import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import pytest
+from conftest import ROOT
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
-from conftest import ROOT
 
 # --- Stable node IDs in the mock server's address space (namespace 2) ----------
 # Sensors / actuators / status keep fixed identifiers; method identifiers below
@@ -56,10 +55,10 @@ CORE_TOOLS = {
 # Both implementations expose the history tool under the same name.
 HISTORY_TOOL = {
     "python": "read_history_opcua_node",
-    "npx": "read_history_opcua_node",
+    "node": "read_history_opcua_node",
 }
 
-NPX_BUILD = ROOT / "packages" / "server-node" / "build" / "index.js"
+NODE_BUILD = ROOT / "packages" / "server-node" / "build" / "index.js"
 
 
 def _server_params(impl: str, url: str) -> StdioServerParameters:
@@ -70,12 +69,12 @@ def _server_params(impl: str, url: str) -> StdioServerParameters:
             args=["--directory", str(ROOT), "run", "--no-sync", "opcua-mcp-server"],
             env=env,
         )
-    if impl == "npx":
-        return StdioServerParameters(command="node", args=[str(NPX_BUILD)], env=env)
+    if impl == "node":
+        return StdioServerParameters(command="node", args=[str(NODE_BUILD)], env=env)
     raise ValueError(impl)
 
 
-@pytest.fixture(params=["python", "npx"])
+@pytest.fixture(params=["python", "node"])
 def server(request, opcua_server):
     """The ``(impl_name, StdioServerParameters)`` for each server implementation.
 
@@ -84,21 +83,23 @@ def server(request, opcua_server):
     cancel scopes are not entered and exited across different tasks.
     """
     impl = request.param
-    if impl == "npx" and not NPX_BUILD.exists():
-        pytest.skip("npx server not built — run `npm install && npm run build` in packages/server-node")
+    if impl == "node" and not NODE_BUILD.exists():
+        pytest.skip(
+            "Node server not built — run `npm install && npm run build` in packages/server-node"
+        )
     return impl, _server_params(impl, opcua_server)
 
 
 @asynccontextmanager
 async def connect(params: StdioServerParameters):
     """Open an initialised MCP ClientSession over stdio."""
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            yield session
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        yield session
 
 
 # --- helpers -------------------------------------------------------------------
+
 
 def text_of(result) -> str:
     """Concatenate all text content blocks of a CallToolResult."""
@@ -115,7 +116,9 @@ async def tool_names(session) -> set[str]:
     return {t.name for t in res.tools}
 
 
-async def wait_for_node_value(session, node_id: str, expected: str, attempts: int = 8, delay: float = 1.0) -> str:
+async def wait_for_node_value(
+    session, node_id: str, expected: str, attempts: int = 8, delay: float = 1.0
+) -> str:
     """Poll a node until its value contains ``expected``.
 
     The mock server's method callbacks mutate internal state; the OPC UA node
@@ -134,11 +137,12 @@ async def wait_for_node_value(session, node_id: str, expected: str, attempts: in
 
 # --- tests ---------------------------------------------------------------------
 
+
 async def test_lists_core_tools(server):
     impl, params = server
     async with connect(params) as session:
         names = await tool_names(session)
-    assert CORE_TOOLS <= names, f"{impl}: missing core tools: {CORE_TOOLS - names}"
+    assert names >= CORE_TOOLS, f"{impl}: missing core tools: {CORE_TOOLS - names}"
 
 
 async def test_history_tool_exposed_when_supported(server):
@@ -153,9 +157,9 @@ async def test_aggregate_tool_hidden_when_unsupported(server):
     """The mock server advertises no aggregate functions, so neither server may
     expose the aggregate tool (capability gating).
 
-    The positive cases live in ``test_aggregate_e2e.py``, which runs against the
-    aggregate-capable mock on :4841."""
-    impl, params = server
+    The positive cases live in ``e2e/test_aggregate_e2e.py``, which runs against
+    the aggregate-capable mock on :4841."""
+    _impl, params = server
     async with connect(params) as session:
         names = await tool_names(session)
     assert "read_aggregate_opcua_node" not in names
@@ -166,15 +170,16 @@ async def test_aggregate_direct_call_errors_cleanly(server):
     crash or wrongly report 'Invalid aggregate function' due to an empty cache —
     it should recompute support on demand and return a clear message.
 
-    npx-only by construction. The Python server gates at import time, so against
-    a server without aggregate support the tool is never registered and a direct
-    call returns "Unknown tool" instead. That is a correct MCP response for an
-    unadvertised tool, and the empty-cache failure mode this guards against
-    cannot arise there: the Python server re-probes on every call and holds no
-    cache to be stale."""
+    Node-only by construction, and not because Python lacks the tool — both
+    runtimes implement it now. The Python server gates registration at import
+    time, so against a server without aggregate support the tool is never
+    registered and a direct call correctly returns "Unknown tool". The
+    empty-cache failure mode this guards against also cannot arise there: the
+    Python server re-probes on every call and holds no cache to go stale.
+    """
     impl, params = server
-    if impl != "npx":
-        pytest.skip("npx-only: the Python server does not register the tool at all here")
+    if impl != "node":
+        pytest.skip("Node-only: the Python server does not register the tool at all here")
     async with connect(params) as session:
         result = await session.call_tool(
             "read_aggregate_opcua_node",
@@ -191,7 +196,7 @@ async def test_aggregate_direct_call_errors_cleanly(server):
 
 
 async def test_read_single_node(server):
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool("read_opcua_node", {"node_id": NODE["Temperature"]})
     assert not result.isError
@@ -201,7 +206,7 @@ async def test_read_single_node(server):
 
 
 async def test_read_multiple_nodes(server):
-    impl, params = server
+    _impl, params = server
     ids = [NODE["Temperature"], NODE["Pressure"], NODE["PumpEnabled"]]
     async with connect(params) as session:
         result = await session.call_tool("read_multiple_opcua_nodes", {"node_ids": ids})
@@ -212,7 +217,7 @@ async def test_read_multiple_nodes(server):
 
 
 async def test_get_all_variables(server):
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool("get_all_variables", {})
     assert not result.isError
@@ -222,7 +227,7 @@ async def test_get_all_variables(server):
 
 
 async def test_browse_children(server):
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             "browse_opcua_node_children", {"node_id": NODE["IndustrialControlSystem"]}
@@ -235,7 +240,7 @@ async def test_browse_children(server):
 
 async def test_write_numeric_node(server):
     """Writing a Double actuator should succeed (the sim may overwrite it later)."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             "write_opcua_node", {"node_id": NODE["ValvePosition"], "value": "80"}
@@ -246,7 +251,7 @@ async def test_write_numeric_node(server):
 
 async def test_write_boolean_node(server):
     """Writing a Boolean node with 'true' must succeed (regression: bool handling)."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             "write_opcua_node", {"node_id": NODE["StopProductionCommand"], "value": "true"}
@@ -258,7 +263,7 @@ async def test_write_boolean_node(server):
 async def test_call_method_start_then_stop(server):
     """Drive production via the StartProduction / StopProduction methods and check
     that SystemMode reacts. Exercises call_opcua_method + the method callbacks."""
-    impl, params = server
+    _impl, params = server
     async with connect(params) as session:
         methods = _discover_methods(await _browse_json(session, NODE["Methods"]))
         assert "StartProduction" in methods and "StopProduction" in methods
@@ -302,10 +307,11 @@ async def test_read_history(server):
 
 # --- browse parsing (server output formats differ) -----------------------------
 
+
 async def _browse_json(session, node_id: str):
     """Return a list of {node_id, browse_name} dicts from a browse call.
 
-    The Python server emits a Python ``repr`` of the list while the npx server
+    The Python server emits a Python ``repr`` of the list while the Node server
     emits JSON; this normalises both.
     """
     result = await session.call_tool("browse_opcua_node_children", {"node_id": node_id})

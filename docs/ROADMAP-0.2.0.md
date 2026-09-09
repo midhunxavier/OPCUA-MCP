@@ -44,7 +44,7 @@ ends with a green test suite — the same working style as
 | — | Name-claim pre-release (optional) | irreversible | ⏸ awaiting decision |
 | 3 | Quality gates (ruff / prettier / tsc) | low, noisy diff | ✅ done |
 | 4 | Unit-test layer | low | ✅ done |
-| 5 | Packaging correctness + module split | **high** | 5a/5c ✅ done; 5b ☐ |
+| 5 | Packaging correctness + module split | **high** | ✅ done |
 | 6 | Python floor + CI matrix | medium | ☐ |
 | 7 | Aggregate parity in Python | medium | ☐ |
 | 8 | Docs consolidation | low | ☐ |
@@ -112,8 +112,13 @@ and capability gating. Node uses the built-in `node:test` — no new dependencie
   invisible to the current suite, which runs from the source tree.
 - **5a** — Python flat module → real `src/opcua_mcp_server/` package. This removes
   the `force-include` hack that installs *two top-level files* into `site-packages`.
-- **5b** — split the 805-line `src/index.ts` into `contract.ts` / `client.ts` /
-  `tools/*.ts`.
+- **5b** — split the 857-line `src/index.ts` into `config.ts` / `contract.ts` /
+  `dates.ts` / `connection.ts` / `tools.ts` / `index.ts`. Landed as a single
+  `tools.ts` (676 lines) rather than the sketched `tools/*.ts`: the mixed
+  concerns — MCP wiring, connection lifecycle, capability probes, tool bodies —
+  are what made the file hard to work in, and those are now separated. Splitting
+  the tool bodies further is cosmetic by comparison and was not worth the extra
+  churn in this pass.
 
 ### Phase 6 — Python floor + CI matrix
 

@@ -40,10 +40,15 @@ def test_manifests_agree_on_version():
 
 
 def test_no_hardcoded_version_in_node_source():
-    """The Node source must not re-declare a version literal.
+    """No Node module may re-declare a version literal.
 
     Regression guard: `src/index.ts` used to hardcode `version: "0.1.2"` next to
     package.json, so the server advertised a stale version after every release.
+    Scans every module, not just index.ts, since the source is now split.
     """
-    src = (ROOT / "packages" / "server-node" / "src" / "index.ts").read_text()
-    assert 'version: "' not in src, "hardcoded version literal in src/index.ts"
+    offenders = [
+        path.name
+        for path in sorted((ROOT / "packages" / "server-node" / "src").glob("*.ts"))
+        if 'version: "' in path.read_text()
+    ]
+    assert not offenders, f"hardcoded version literal in: {offenders}"

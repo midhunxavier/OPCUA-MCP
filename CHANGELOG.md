@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- The Node server is split from one 857-line `index.ts` into `config`,
+  `contract`, `dates`, `connection` (client/session lifecycle plus the capability
+  probes), `tools` (the tool implementations and dispatch) and `index` (MCP
+  wiring and the entry point). Adding a tool now touches `tools.ts` and the
+  contract, nothing else.
 - The Python server is now a real package (`src/opcua_mcp_server/`) split into
   `config`, `contract`, `datetimes`, `capabilities` and `server`, instead of a
   single 505-line flat module. The wheel now installs exactly one top-level name;

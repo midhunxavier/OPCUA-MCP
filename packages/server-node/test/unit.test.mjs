@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import test, { describe } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { toDate } from "../build/index.js";
+import { toDate } from "../build/dates.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

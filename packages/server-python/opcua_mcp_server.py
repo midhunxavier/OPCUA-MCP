@@ -1,13 +1,13 @@
-from mcp.server.fastmcp import FastMCP, Context
-from opcua import Client
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
 import asyncio
 import os
 import sys
-from typing import List, Dict, Any
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
-from opcua import ua
+from typing import Any
+
+from mcp.server.fastmcp import Context, FastMCP
+from opcua import Client
 from opcua.ua import NodeClass
 
 server_url = os.getenv("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
@@ -30,14 +30,13 @@ def _load_contract() -> dict:
     here = Path(__file__).resolve()
     candidates = (
         here.parent / "opcua_mcp_server_contract.json",  # bundled in the wheel
-        here.parents[2] / "contract" / "tools.json",     # repo-root source layout
+        here.parents[2] / "contract" / "tools.json",  # repo-root source layout
     )
     for path in candidates:
         if path.is_file():
             return json.loads(path.read_text())
     raise FileNotFoundError(
-        "Shared tool contract not found; looked in "
-        + ", ".join(str(p) for p in candidates)
+        "Shared tool contract not found; looked in " + ", ".join(str(p) for p in candidates)
     )
 
 
@@ -47,11 +46,12 @@ _CONTRACT = _load_contract()
 _DESC = {t["name"]: t["description"] for t in _CONTRACT["tools"]}
 _HISTORY_NODE_ID = _CONTRACT["capabilities"]["history"]["nodeId"]
 
+
 # Manage the lifecycle of the OPC UA client connection
 @asynccontextmanager
 async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     """Handle OPC UA client connection lifecycle."""
-    client = Client(server_url)  
+    client = Client(server_url)
     try:
         # Connect to OPC UA server synchronously, wrapped in a thread for async compatibility
         await asyncio.to_thread(client.connect)
@@ -62,6 +62,7 @@ async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
         # Disconnect from OPC UA server on shutdown
         await asyncio.to_thread(client.disconnect)
         print("Disconnected from OPC UA server", file=sys.stderr)
+
 
 def _package_version() -> str:
     """Version of the installed distribution, single-sourced from pyproject.toml.
@@ -83,16 +84,17 @@ mcp = FastMCP("opcua-mcp-server", lifespan=opcua_lifespan)
 # null version over MCP while the Node server reports a real one.
 mcp._mcp_server.version = _package_version()
 
+
 # Tool: Read the value of an OPC UA node
 @mcp.tool(description=_DESC["read_opcua_node"])
 def read_opcua_node(node_id: str, ctx: Context) -> str:
     """
     Read the value of a specific OPC UA node.
-    
+
     Parameters:
         node_id (str): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'.
                        Example: 'ns=2;i=2'.
-    
+
     Returns:
         str: The value of the node as a string, prefixed with the node ID.
     """
@@ -100,6 +102,7 @@ def read_opcua_node(node_id: str, ctx: Context) -> str:
     node = client.get_node(node_id)
     value = node.get_value()  # Synchronous call to get node value
     return f"Node {node_id} value: {value}"
+
 
 def _parse_iso_datetime(value: str | None) -> datetime | None:
     """Parse an optional ISO-8601 string into a datetime.
@@ -113,19 +116,19 @@ def _parse_iso_datetime(value: str | None) -> datetime | None:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except (ValueError, TypeError):
-        raise ValueError(
-            f'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z'
-        )
+        raise ValueError(f'Invalid date/time: "{value}". Use ISO 8601, e.g. 2026-04-23T17:40:00Z')
 
 
 # Tool: Read historical values of an OPC UA node.
 # Registered only when the server supports historical data access (see below),
 # mirroring the Node server's capability gating.
-def read_history_opcua_node(node_id: str,
-                            ctx: Context,
-                            start_time: str | None = None,
-                            end_time: str | None = None,
-                            num_values: int = 0) -> list[dict]:
+def read_history_opcua_node(
+    node_id: str,
+    ctx: Context,
+    start_time: str | None = None,
+    end_time: str | None = None,
+    num_values: int = 0,
+) -> list[dict]:
     """
     Read the historical values of a specific OPC UA node.
 
@@ -152,7 +155,7 @@ def read_history_opcua_node(node_id: str,
         {
             "value": str(v.Value.Value),
             "timestamp": str(v.SourceTimestamp),
-            "status": str(v.StatusCode.name)
+            "status": str(v.StatusCode.name),
         }
         for v in values
     ]
@@ -177,7 +180,9 @@ def _server_supports_history(url: str) -> bool:
 
 # Conditionally register the history tool based on server capability.
 if _server_supports_history(server_url):
-    read_history_opcua_node = mcp.tool(description=_DESC["read_history_opcua_node"])(read_history_opcua_node)
+    read_history_opcua_node = mcp.tool(description=_DESC["read_history_opcua_node"])(
+        read_history_opcua_node
+    )
 
 
 # Tool: Write a value to an OPC UA node
@@ -185,12 +190,12 @@ if _server_supports_history(server_url):
 def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
     """
     Write a value to a specific OPC UA node.
-    
+
     Parameters:
         node_id (str): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'.
                        Example: 'ns=2;i=3'.
         value (str): The value to write to the node. Will be converted based on node type.
-    
+
     Returns:
         str: A message indicating success or failure of the write operation.
     """
@@ -201,14 +206,15 @@ def write_opcua_node(node_id: str, value: str, ctx: Context) -> str:
         # Note: check bool before (int, float) because bool is a subclass of int.
         current_value = node.get_value()
         if isinstance(current_value, bool):
-            node.set_value(str(value).lower() in ['true', '1', 'yes', 'on'])
+            node.set_value(str(value).lower() in ["true", "1", "yes", "on"])
         elif isinstance(current_value, (int, float)):
             node.set_value(float(value))
         else:
             node.set_value(value)
         return f"Successfully wrote {value} to node {node_id}"
     except Exception as e:
-        return f"Error writing to node {node_id}: {str(e)}"
+        return f"Error writing to node {node_id}: {e!s}"
+
 
 # Tool: Browse the children of a specific OPC UA node
 @mcp.tool(description=_DESC["browse_opcua_node_children"])
@@ -227,31 +233,35 @@ def browse_opcua_node_children(node_id: str, ctx: Context) -> str:
     try:
         node = client.get_node(node_id)
         children = node.get_children()
-        
+
         children_info = []
         for child in children:
             try:
                 browse_name = child.get_browse_name()
-                children_info.append({
-                    "node_id": child.nodeid.to_string(),
-                    "browse_name": f"{browse_name.NamespaceIndex}:{browse_name.Name}"
-                })
+                children_info.append(
+                    {
+                        "node_id": child.nodeid.to_string(),
+                        "browse_name": f"{browse_name.NamespaceIndex}:{browse_name.Name}",
+                    }
+                )
             except Exception as e:
-                 children_info.append({
-                     "node_id": child.nodeid.to_string(),
-                     "browse_name": f"Error getting name: {e}"
-                 })
+                children_info.append(
+                    {"node_id": child.nodeid.to_string(), "browse_name": f"Error getting name: {e}"}
+                )
 
         # import json
-        # return json.dumps(children_info, indent=2) 
-        return f"Children of {node_id}: {children_info!r}" 
-        
+        # return json.dumps(children_info, indent=2)
+        return f"Children of {node_id}: {children_info!r}"
+
     except Exception as e:
-        return f"Error Browse children of node {node_id}: {str(e)}"
+        return f"Error Browse children of node {node_id}: {e!s}"
+
 
 # Tool: Call an OPC UA method
 @mcp.tool(description=_DESC["call_opcua_method"])
-def call_opcua_method(object_node_id: str, method_node_id: str, ctx: Context, arguments: List[Any] = None) -> str:
+def call_opcua_method(
+    object_node_id: str, method_node_id: str, ctx: Context, arguments: list[Any] = None
+) -> str:
     """
     Call a method on a specific OPC UA object node.
 
@@ -292,20 +302,21 @@ def call_opcua_method(object_node_id: str, method_node_id: str, ctx: Context, ar
                             method_args.append(arg)
                 else:
                     method_args.append(arg)
-        
+
         # Call the method on the object node. python-opcua exposes call_method on Node
         # (not Client), and a string methodid is treated as a child browse-name, so pass
         # the resolved method Node to call it by node id.
         result = object_node.call_method(method_node, *method_args)
 
         return f"Method call successful. Object: {object_node_id}, Method: {method_node_id}, Result: {result}"
-        
+
     except Exception as e:
-        return f"Error calling method {method_node_id} on object {object_node_id}: {str(e)}"
+        return f"Error calling method {method_node_id} on object {object_node_id}: {e!s}"
+
 
 # Tool: Read multiple OPC UA nodes
 @mcp.tool(description=_DESC["read_multiple_opcua_nodes"])
-def read_multiple_opcua_nodes(node_ids: List[str], ctx: Context) -> str:
+def read_multiple_opcua_nodes(node_ids: list[str], ctx: Context) -> str:
     """
     Read the values of multiple OPC UA nodes in a single request.
 
@@ -324,74 +335,76 @@ def read_multiple_opcua_nodes(node_ids: List[str], ctx: Context) -> str:
                 value = node.get_value()
                 results[node_id] = value
             except Exception as e:
-                results[node_id] = f"Error: {str(e)}"
-        
+                results[node_id] = f"Error: {e!s}"
+
         return f"Multiple node read results: {results!r}"
-        
+
     except Exception as e:
-        return f"Error reading multiple nodes: {str(e)}"
+        return f"Error reading multiple nodes: {e!s}"
+
 
 # Tool: Write multiple OPC UA nodes
 @mcp.tool(description=_DESC["write_multiple_opcua_nodes"])
-def write_multiple_opcua_nodes(nodes_to_write: List[Dict[str, Any]], ctx: Context) -> str:
+def write_multiple_opcua_nodes(nodes_to_write: list[dict[str, Any]], ctx: Context) -> str:
     """
     Write values to multiple OPC UA nodes in a single request.
 
     Parameters:
-        nodes_to_write (List[Dict[str, Any]]): A list of dictionaries, where each dictionary 
+        nodes_to_write (List[Dict[str, Any]]): A list of dictionaries, where each dictionary
                                                contains 'node_id' (str) and 'value' (Any).
                                                The value will be wrapped in an OPC UA Variant.
-                                               Example: [{'node_id': 'ns=2;i=2', 'value': 10.5}, 
+                                               Example: [{'node_id': 'ns=2;i=2', 'value': 10.5},
                                                          {'node_id': 'ns=2;i=3', 'value': 'active'}]
 
     Returns:
-        str: A message indicating the success or failure of the write operation. 
+        str: A message indicating the success or failure of the write operation.
              Returns status codes for each write attempt.
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
     try:
         results = []
         for item in nodes_to_write:
-            node_id = item['node_id']
-            value = item['value']
-            
+            node_id = item["node_id"]
+            value = item["value"]
+
             try:
                 node = client.get_node(node_id)
-                
+
                 # Convert value based on the node's current type.
                 # Note: check bool before (int, float) because bool is a subclass of int.
                 current_value = node.get_value()
                 if isinstance(current_value, bool):
-                    converted_value = str(value).lower() in ['true', '1', 'yes', 'on']
+                    converted_value = str(value).lower() in ["true", "1", "yes", "on"]
                 elif isinstance(current_value, (int, float)):
                     converted_value = float(value)
                 else:
                     converted_value = str(value)
-                
+
                 node.set_value(converted_value)
                 results.append({"node_id": node_id, "status": "Success"})
-                
+
             except Exception as e:
-                results.append({"node_id": node_id, "status": f"Error: {str(e)}"})
-        
+                results.append({"node_id": node_id, "status": f"Error: {e!s}"})
+
         return f"Write operation results: {results!r}"
-        
+
     except Exception as e:
-        return f"Error writing multiple nodes: {str(e)}"
+        return f"Error writing multiple nodes: {e!s}"
+
 
 # Tool: Get all variables information
 @mcp.tool(description=_DESC["get_all_variables"])
 def get_all_variables(ctx: Context) -> str:
     """
     Get all available variables from the OPC UA server, excluding those under the built-in 'Server' object.
-    
+
     Returns:
-        str: A string representation of all variables with their name, nodeid, object_id, value, 
+        str: A string representation of all variables with their name, nodeid, object_id, value,
              data_type, and description.
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
     variables_info = []
-    
+
     try:
         objects_node = client.get_objects_node()
 
@@ -418,7 +431,7 @@ def get_all_variables(ctx: Context) -> str:
                 if node_class == NodeClass.Variable:
                     browse_name = child_browse_name
                     node_id = child.nodeid.to_string()
-                    
+
                     try:
                         parent_node = child.get_parent()
                         object_id = parent_node.nodeid.to_string() if parent_node else "N/A"
@@ -439,22 +452,24 @@ def get_all_variables(ctx: Context) -> str:
                         desc = child.get_description().Text
                     except Exception:
                         desc = ""
-                    
-                    variables_info.append({
-                        "name": browse_name,
-                        "nodeid": node_id,
-                        "object_id": object_id,
-                        "value": value,
-                        "data_type": data_type,
-                        "description": desc
-                    })
+
+                    variables_info.append(
+                        {
+                            "name": browse_name,
+                            "nodeid": node_id,
+                            "object_id": object_id,
+                            "value": value,
+                            "data_type": data_type,
+                            "description": desc,
+                        }
+                    )
                 elif node_class == NodeClass.Object:
                     # Recursively search children of this object,
                     # unless it is the "Server" object
                     search_variables(child)
 
         search_variables(objects_node)
-        
+
         if variables_info:
             result = f"Found {len(variables_info)} variables:\n"
             for var in variables_info:
@@ -467,9 +482,10 @@ def get_all_variables(ctx: Context) -> str:
             return result
         else:
             return "No variables found in the OPC UA server."
-            
+
     except Exception as e:
-        return f"Error while finding variables: {str(e)}"
+        return f"Error while finding variables: {e!s}"
+
 
 # Run the server
 def main() -> None:

@@ -15,9 +15,8 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from conftest import ROOT
-from test_mcp_e2e import _server_params, connect, NODE_BUILD
+from test_mcp_e2e import NODE_BUILD, _server_params, connect
 
 CONTRACT = json.loads((ROOT / "contract" / "tools.json").read_text())
 
@@ -66,6 +65,4 @@ async def test_servers_match_contract(impl_params):
         assert got_props == want_props, (
             f"{impl}/{name}: params {got_props} != contract {want_props}"
         )
-        assert got_req == want_req, (
-            f"{impl}/{name}: required {got_req} != contract {want_req}"
-        )
+        assert got_req == want_req, f"{impl}/{name}: required {got_req} != contract {want_req}"

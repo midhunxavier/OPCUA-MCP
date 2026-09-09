@@ -88,12 +88,12 @@ class OPCUAMCPServer {
 
   private setupLifecycle() {
     // Handle shutdown gracefully
-    process.on('SIGINT', async () => {
+    process.on("SIGINT", async () => {
       await this.disconnect();
       process.exit(0);
     });
 
-    process.on('SIGTERM', async () => {
+    process.on("SIGTERM", async () => {
       await this.disconnect();
       process.exit(0);
     });
@@ -109,7 +109,7 @@ class OPCUAMCPServer {
         applicationName: "OPC UA MCP Client",
         connectionStrategy: {
           initialDelay: 1000,
-          maxRetry: 1
+          maxRetry: 1,
         },
         securityMode: MessageSecurityMode.None,
         securityPolicy: SecurityPolicy.None,
@@ -157,10 +157,7 @@ class OPCUAMCPServer {
     try {
       await this.ensureConnection();
       const dataValue = await this.session!.readVariableValue(CONTRACT.capabilities.history.nodeId);
-      return (
-        dataValue.statusCode === StatusCodes.Good &&
-        dataValue.value?.value === true
-      );
+      return dataValue.statusCode === StatusCodes.Good && dataValue.value?.value === true;
     } catch (error) {
       console.error("accessHistoryDataCapability probe failed:", error);
       return false;
@@ -178,10 +175,7 @@ class OPCUAMCPServer {
         browseDirection: 0, // Forward
         resultMask: 63, // All information (including BrowseName)
       });
-      if (
-        browseResult.statusCode === StatusCodes.Good &&
-        browseResult.references
-      ) {
+      if (browseResult.statusCode === StatusCodes.Good && browseResult.references) {
         for (const reference of browseResult.references) {
           // Map the string BrowseName to the AggregateFunction
           if (reference.browseName.name) {
@@ -193,10 +187,7 @@ class OPCUAMCPServer {
         }
       }
     } catch (error) {
-      console.error(
-        "Error during serverCapabilitiesAggregateFunctions:",
-        error,
-      );
+      console.error("Error during serverCapabilitiesAggregateFunctions:", error);
     }
     return aggregateFunctions;
   }
@@ -248,7 +239,7 @@ class OPCUAMCPServer {
               args?.node_id as string,
               args?.start_time as string | undefined,
               args?.end_time as string | undefined,
-              (args?.num_values as number) || 0,
+              (args?.num_values as number) || 0
             );
 
           case "read_aggregate_opcua_node":
@@ -257,7 +248,7 @@ class OPCUAMCPServer {
               args?.start_time as string,
               args?.end_time as string | undefined,
               args?.aggregate_function as string,
-              (args?.processing_interval as number) || 0,
+              (args?.processing_interval as number) || 0
             );
 
           case "write_opcua_node":
@@ -270,7 +261,9 @@ class OPCUAMCPServer {
             return await this.readMultipleOpcuaNodes(args?.node_ids as string[]);
 
           case "write_multiple_opcua_nodes":
-            return await this.writeMultipleOpcuaNodes(args?.nodes_to_write as Array<{node_id: string, value: string}>);
+            return await this.writeMultipleOpcuaNodes(
+              args?.nodes_to_write as Array<{ node_id: string; value: string }>
+            );
 
           case "call_opcua_method":
             return await this.callOpcuaMethod(
@@ -290,9 +283,9 @@ class OPCUAMCPServer {
           content: [
             {
               type: "text",
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`
-            }
-          ]
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
         };
       }
     });
@@ -315,12 +308,14 @@ class OPCUAMCPServer {
         content: [
           {
             type: "text",
-            text: `Node ${nodeId} value: ${value}`
-          }
-        ]
+            text: `Node ${nodeId} value: ${value}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -328,7 +323,7 @@ class OPCUAMCPServer {
     nodeId: string,
     start: string | undefined,
     end: string | undefined,
-    numValuesPerNode: number,
+    numValuesPerNode: number
   ) {
     if (!this.session) {
       throw new Error("No OPC UA session available");
@@ -341,25 +336,29 @@ class OPCUAMCPServer {
         toDate(end) as any,
         {
           numValuesPerNode,
-        },
+        }
       );
       if (historyValues.length !== 1) {
         throw new Error(`Read history failed`);
       }
       if (historyValues[0].statusCode !== StatusCodes.Good) {
-        throw new Error(`Read history failed with status: ${historyValues[0].statusCode.toString()}`);
+        throw new Error(
+          `Read history failed with status: ${historyValues[0].statusCode.toString()}`
+        );
       }
       const dataValues = (historyValues[0].historyData as HistoryData).dataValues;
       return {
         content: [
           {
             type: "text",
-            text: `${JSON.stringify(dataValues, null, 2)}`
-          }
-        ]
+            text: `${JSON.stringify(dataValues, null, 2)}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -368,7 +367,7 @@ class OPCUAMCPServer {
     start: string,
     end: string | undefined,
     aggregate_fn: string,
-    processing_interval: number,
+    processing_interval: number
   ) {
     if (!this.session) {
       throw new Error("No OPC UA session available");
@@ -384,7 +383,7 @@ class OPCUAMCPServer {
       throw new Error(
         this.aggregateFunctions.length === 0
           ? "Server does not advertise any aggregate functions"
-          : `Invalid aggregate function. Supported: ${this.aggregateFunctions.join(", ")}`,
+          : `Invalid aggregate function. Supported: ${this.aggregateFunctions.join(", ")}`
       );
     }
 
@@ -395,22 +394,26 @@ class OPCUAMCPServer {
         toDate(start) as any,
         (toDate(end) ?? new Date()) as any,
         aggregateFn,
-        processing_interval,
+        processing_interval
       );
       if (historyValues.statusCode !== StatusCodes.Good) {
-        throw new Error(`Read aggregate failed with status: ${historyValues.statusCode.toString()}`);
+        throw new Error(
+          `Read aggregate failed with status: ${historyValues.statusCode.toString()}`
+        );
       }
       const dataValues = (historyValues.historyData as HistoryData).dataValues;
       return {
         content: [
           {
             type: "text",
-            text: `${JSON.stringify(dataValues, null, 2)}`
-          }
-        ]
+            text: `${JSON.stringify(dataValues, null, 2)}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -429,13 +432,13 @@ class OPCUAMCPServer {
       const valueStr = String(value);
 
       // Convert value based on the current type
-      if (typeof currentValue === 'number') {
+      if (typeof currentValue === "number") {
         convertedValue = parseFloat(valueStr);
         if (isNaN(convertedValue)) {
           throw new Error(`Cannot convert "${valueStr}" to number`);
         }
-      } else if (typeof currentValue === 'boolean') {
-        convertedValue = valueStr.toLowerCase() === 'true' || valueStr === '1';
+      } else if (typeof currentValue === "boolean") {
+        convertedValue = valueStr.toLowerCase() === "true" || valueStr === "1";
       } else {
         convertedValue = valueStr; // Keep as string
       }
@@ -444,8 +447,11 @@ class OPCUAMCPServer {
         nodeId: nodeId,
         attributeId: AttributeIds.Value,
         value: new DataValue({
-          value: new Variant({ dataType: currentDataValue.value?.dataType || DataType.String, value: convertedValue })
-        })
+          value: new Variant({
+            dataType: currentDataValue.value?.dataType || DataType.String,
+            value: convertedValue,
+          }),
+        }),
       };
 
       const statusCode = await this.session.write(nodeToWrite);
@@ -458,12 +464,14 @@ class OPCUAMCPServer {
         content: [
           {
             type: "text",
-            text: `Successfully wrote ${value} to node ${nodeId}`
-          }
-        ]
+            text: `Successfully wrote ${value} to node ${nodeId}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to write to node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to write to node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -479,21 +487,24 @@ class OPCUAMCPServer {
         throw new Error(`Browse failed with status: ${browseResult.statusCode.toString()}`);
       }
 
-      const childrenInfo = browseResult.references?.map((ref: ReferenceDescription) => ({
-        node_id: ref.nodeId.toString(),
-        browse_name: `${ref.browseName.namespaceIndex}:${ref.browseName.name}`
-      })) || [];
+      const childrenInfo =
+        browseResult.references?.map((ref: ReferenceDescription) => ({
+          node_id: ref.nodeId.toString(),
+          browse_name: `${ref.browseName.namespaceIndex}:${ref.browseName.name}`,
+        })) || [];
 
       return {
         content: [
           {
             type: "text",
-            text: `Children of ${nodeId}: ${JSON.stringify(childrenInfo, null, 2)}`
-          }
-        ]
+            text: `Children of ${nodeId}: ${JSON.stringify(childrenInfo, null, 2)}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to browse children of node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to browse children of node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -503,9 +514,9 @@ class OPCUAMCPServer {
     }
 
     try {
-      const nodesToRead = nodeIds.map(nodeId => ({
+      const nodesToRead = nodeIds.map((nodeId) => ({
         nodeId: nodeId,
-        attributeId: AttributeIds.Value
+        attributeId: AttributeIds.Value,
       }));
 
       const dataValues = await this.session.read(nodesToRead);
@@ -525,26 +536,28 @@ class OPCUAMCPServer {
         content: [
           {
             type: "text",
-            text: JSON.stringify(results, null, 2)
-          }
-        ]
+            text: JSON.stringify(results, null, 2),
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to read multiple nodes: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to read multiple nodes: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  private async writeMultipleOpcuaNodes(nodesToWrite: Array<{node_id: string, value: string}>) {
+  private async writeMultipleOpcuaNodes(nodesToWrite: Array<{ node_id: string; value: string }>) {
     if (!this.session) {
       throw new Error("No OPC UA session available");
     }
 
     try {
       // First, read current values to determine data types
-      const nodeIds = nodesToWrite.map(item => item.node_id);
-      const nodesToRead = nodeIds.map(nodeId => ({
+      const nodeIds = nodesToWrite.map((item) => item.node_id);
+      const nodesToRead = nodeIds.map((nodeId) => ({
         nodeId: nodeId,
-        attributeId: AttributeIds.Value
+        attributeId: AttributeIds.Value,
       }));
 
       const currentDataValues = await this.session.read(nodesToRead);
@@ -558,13 +571,13 @@ class OPCUAMCPServer {
         const valueStr = String(item.value);
 
         // Convert value based on the current type
-        if (typeof currentValue === 'number') {
+        if (typeof currentValue === "number") {
           convertedValue = parseFloat(valueStr);
           if (isNaN(convertedValue)) {
             throw new Error(`Cannot convert "${valueStr}" to number for node ${item.node_id}`);
           }
-        } else if (typeof currentValue === 'boolean') {
-          convertedValue = valueStr.toLowerCase() === 'true' || valueStr === '1';
+        } else if (typeof currentValue === "boolean") {
+          convertedValue = valueStr.toLowerCase() === "true" || valueStr === "1";
         } else {
           convertedValue = valueStr; // Keep as string
         }
@@ -575,9 +588,9 @@ class OPCUAMCPServer {
           value: new DataValue({
             value: new Variant({
               dataType: currentDataValue.value?.dataType || DataType.String,
-              value: convertedValue
-            })
-          })
+              value: convertedValue,
+            }),
+          }),
         };
       });
 
@@ -585,19 +598,21 @@ class OPCUAMCPServer {
 
       const results = statusCodes.map((statusCode, index) => ({
         node_id: nodesToWrite[index].node_id,
-        status: statusCode === StatusCodes.Good ? 'Success' : `Error: ${statusCode.toString()}`
+        status: statusCode === StatusCodes.Good ? "Success" : `Error: ${statusCode.toString()}`,
       }));
 
       return {
         content: [
           {
             type: "text",
-            text: `Write operation results:\n${JSON.stringify(results, null, 2)}`
-          }
-        ]
+            text: `Write operation results:\n${JSON.stringify(results, null, 2)}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to write multiple nodes: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to write multiple nodes: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -630,17 +645,19 @@ class OPCUAMCPServer {
             }
           }
 
-          convertedArgs.push(new Variant({
-            dataType: typeof convertedValue === 'number' ? DataType.Double : DataType.String,
-            value: convertedValue
-          }));
+          convertedArgs.push(
+            new Variant({
+              dataType: typeof convertedValue === "number" ? DataType.Double : DataType.String,
+              value: convertedValue,
+            })
+          );
         }
       }
 
       const methodToCall = {
         objectId: objectNodeId,
         methodId: methodNodeId,
-        inputArguments: convertedArgs
+        inputArguments: convertedArgs,
       };
 
       const callResult: CallMethodResult = await this.session.call(methodToCall);
@@ -653,12 +670,14 @@ class OPCUAMCPServer {
         content: [
           {
             type: "text",
-            text: `Method call successful. Object: ${objectNodeId}, Method: ${methodNodeId}, Result: ${JSON.stringify(callResult.outputArguments)}`
-          }
-        ]
+            text: `Method call successful. Object: ${objectNodeId}, Method: ${methodNodeId}, Result: ${JSON.stringify(callResult.outputArguments)}`,
+          },
+        ],
       };
     } catch (error) {
-      throw new Error(`Failed to call method ${methodNodeId} on object ${objectNodeId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to call method ${methodNodeId} on object ${objectNodeId}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -701,12 +720,13 @@ class OPCUAMCPServer {
               // Read the node class to determine if it's a variable or object
               const nodeClassResults = await this.session!.read({
                 nodeId: childNodeId,
-                attributeId: AttributeIds.NodeClass
+                attributeId: AttributeIds.NodeClass,
               });
 
               const nodeClass = nodeClassResults.value?.value;
 
-              if (nodeClass === 2) { // NodeClass.Variable = 2
+              if (nodeClass === 2) {
+                // NodeClass.Variable = 2
                 // This is a variable node
                 let value: any;
                 let dataType = "";
@@ -723,7 +743,7 @@ class OPCUAMCPServer {
                 try {
                   const dataTypeResults = await this.session!.read({
                     nodeId: childNodeId,
-                    attributeId: AttributeIds.DataType
+                    attributeId: AttributeIds.DataType,
                   });
                   dataType = dataTypeResults.value?.value?.toString() || "";
                 } catch {
@@ -733,7 +753,7 @@ class OPCUAMCPServer {
                 try {
                   const descResults = await this.session!.read({
                     nodeId: childNodeId,
-                    attributeId: AttributeIds.Description
+                    attributeId: AttributeIds.Description,
                   });
                   description = descResults.value?.value?.text || "";
                 } catch {
@@ -746,9 +766,10 @@ class OPCUAMCPServer {
                   object_id: objectId,
                   value: value,
                   data_type: dataType,
-                  description: description
+                  description: description,
                 });
-              } else if (nodeClass === 1) { // NodeClass.Object = 1
+              } else if (nodeClass === 1) {
+                // NodeClass.Object = 1
                 // This is an object node, recursively search its children
                 await searchVariables(childNodeId);
               }
@@ -780,22 +801,24 @@ class OPCUAMCPServer {
           content: [
             {
               type: "text",
-              text: result
-            }
-          ]
+              text: result,
+            },
+          ],
         };
       } else {
         return {
           content: [
             {
               type: "text",
-              text: "No variables found in the OPC UA server."
-            }
-          ]
+              text: "No variables found in the OPC UA server.",
+            },
+          ],
         };
       }
     } catch (error) {
-      throw new Error(`Failed to get all variables: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to get all variables: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

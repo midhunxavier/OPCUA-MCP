@@ -17,9 +17,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SERVER_URL = os.environ.get(
-    "OPCUA_SERVER_URL", "opc.tcp://localhost:4840/freeopcua/server/"
-)
+SERVER_URL = os.environ.get("OPCUA_SERVER_URL", "opc.tcp://localhost:4840/freeopcua/server/")
 HOST = "localhost"
 PORT = 4840
 

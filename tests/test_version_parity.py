@@ -20,11 +20,10 @@ import json
 import tomllib
 
 import pytest
+from conftest import ROOT
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client
-
-from conftest import ROOT
-from test_mcp_e2e import _server_params, NODE_BUILD
+from test_mcp_e2e import NODE_BUILD, _server_params
 
 NODE_PKG = ROOT / "packages" / "server-node" / "package.json"
 PYTHON_PYPROJECT = ROOT / "packages" / "server-python" / "pyproject.toml"

@@ -18,13 +18,11 @@ import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import pytest
+from conftest import ROOT
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
-from conftest import ROOT
 
 # --- Stable node IDs in the mock server's address space (namespace 2) ----------
 # Sensors / actuators / status keep fixed identifiers; method identifiers below
@@ -86,20 +84,22 @@ def server(request, opcua_server):
     """
     impl = request.param
     if impl == "node" and not NODE_BUILD.exists():
-        pytest.skip("Node server not built — run `npm install && npm run build` in packages/server-node")
+        pytest.skip(
+            "Node server not built — run `npm install && npm run build` in packages/server-node"
+        )
     return impl, _server_params(impl, opcua_server)
 
 
 @asynccontextmanager
 async def connect(params: StdioServerParameters):
     """Open an initialised MCP ClientSession over stdio."""
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            yield session
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        yield session
 
 
 # --- helpers -------------------------------------------------------------------
+
 
 def text_of(result) -> str:
     """Concatenate all text content blocks of a CallToolResult."""
@@ -116,7 +116,9 @@ async def tool_names(session) -> set[str]:
     return {t.name for t in res.tools}
 
 
-async def wait_for_node_value(session, node_id: str, expected: str, attempts: int = 8, delay: float = 1.0) -> str:
+async def wait_for_node_value(
+    session, node_id: str, expected: str, attempts: int = 8, delay: float = 1.0
+) -> str:
     """Poll a node until its value contains ``expected``.
 
     The mock server's method callbacks mutate internal state; the OPC UA node
@@ -135,11 +137,12 @@ async def wait_for_node_value(session, node_id: str, expected: str, attempts: in
 
 # --- tests ---------------------------------------------------------------------
 
+
 async def test_lists_core_tools(server):
     impl, params = server
     async with connect(params) as session:
         names = await tool_names(session)
-    assert CORE_TOOLS <= names, f"{impl}: missing core tools: {CORE_TOOLS - names}"
+    assert names >= CORE_TOOLS, f"{impl}: missing core tools: {CORE_TOOLS - names}"
 
 
 async def test_history_tool_exposed_when_supported(server):
@@ -292,6 +295,7 @@ async def test_read_history(server):
 
 
 # --- browse parsing (server output formats differ) -----------------------------
+
 
 async def _browse_json(session, node_id: str):
     """Return a list of {node_id, browse_name} dicts from a browse call.

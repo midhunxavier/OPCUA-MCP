@@ -45,9 +45,9 @@
     "node-opcua-client": "^2.128.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.4.1",
     "prettier": "^3.9.6",
-    "typescript": "^5.0.0"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"

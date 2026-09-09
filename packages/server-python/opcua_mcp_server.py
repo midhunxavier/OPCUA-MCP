@@ -6,7 +6,7 @@ import asyncio
 import os
 import sys
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from opcua import ua
 from opcua.ua import NodeClass
 
@@ -222,7 +222,10 @@ def read_aggregate_opcua_node(node_id: str,
     try:
         details = ua.ReadProcessedDetails()
         details.StartTime = _parse_iso_datetime(start_time)
-        details.EndTime = _parse_iso_datetime(end_time) or datetime.now()
+        # UTC, not naive local time: `_parse_iso_datetime` yields aware UTC, so a
+        # naive `datetime.now()` here would shift the window end by the host's UTC
+        # offset and pad the result with an empty bucket per interval in between.
+        details.EndTime = _parse_iso_datetime(end_time) or datetime.now(timezone.utc)
         details.ProcessingInterval = processing_interval
         details.AggregateType = [aggregate_functions[aggregate_function]]
 

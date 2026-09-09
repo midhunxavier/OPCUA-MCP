@@ -40,7 +40,7 @@
     "url": "https://github.com/midhunxavier/OPCUA-MCP/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "node-opcua": "^2.128.0",
     "node-opcua-client": "^2.128.0"
   },

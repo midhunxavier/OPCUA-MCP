@@ -29,6 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- Unit-test tier (`tests/unit/` and `packages/server-node/test/`) covering the
+  pure logic — ISO-8601 parsing, contract invariants, version manifests — with no
+  OPC UA server and no MCP transport. 42 Python unit tests run in ~0.2s against
+  ~50s for the end-to-end suite. The Node tests use the built-in `node:test`
+  runner, so the package gains no dependency.
+- The Node server module is now importable without starting a server: the entry
+  point is guarded, and `toDate`/`OPCUAMCPServer` are exported for testing. The
+  guard resolves symlinks, because `npx` invokes the `node_modules/.bin` shim and
+  a naive `import.meta.url === process.argv[1]` check would never match.
 - Artifact smoke tests (`tests/smoke/`): build the npm tarball and the Python
   wheel, install each into an isolated location, and drive the installed entry
   point over MCP from a working directory outside the repo. Run as their own CI
@@ -44,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stdio against the mock OPC UA server.
 - `CONTRIBUTING.md`, `TESTING.md`, and `EXAMPLES.md` documentation.
 - `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and CI workflow.
+
+### Known issues
+- The two servers disagree on out-of-range calendar dates. The Node server
+  accepts `2026-02-30` and silently rolls it over to `2026-03-02` (V8 `Date`
+  semantics), while the Python server rejects it. A history read for a
+  nonexistent date therefore returns data for the wrong day instead of erroring.
+  Asserted in `packages/server-node/test/unit.test.mjs` so it cannot change
+  unnoticed; the fix is tracked with the rest of the parity work.
 
 ### Fixed
 - **The Python server no longer breaks on a fresh install.** Its `mcp[cli]>=1.9.1`

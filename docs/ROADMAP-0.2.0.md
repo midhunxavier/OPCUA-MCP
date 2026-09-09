@@ -43,8 +43,8 @@ ends with a green test suite — the same working style as
 | 2 | Version single-sourcing | low | ✅ done |
 | — | Name-claim pre-release (optional) | irreversible | ⏸ awaiting decision |
 | 3 | Quality gates (ruff / prettier / tsc) | low, noisy diff | ✅ done |
-| 4 | Unit-test layer | low | ☐ |
-| 5 | Packaging correctness + module split | **high** | ☐ |
+| 4 | Unit-test layer | low | ✅ done |
+| 5 | Packaging correctness + module split | **high** | 5c ✅ done; 5a/5b ☐ |
 | 6 | Python floor + CI matrix | medium | ☐ |
 | 7 | Aggregate parity in Python | medium | ☐ |
 | 8 | Docs consolidation | low | ☐ |
@@ -117,6 +117,10 @@ and capability gating. Node uses the built-in `node:test` — no new dependencie
 
 ### Phase 6 — Python floor + CI matrix
 
+Note this also requires dropping ruff's `target-version` from `py313`, or its
+pyupgrade rules will keep suggesting 3.11+-only constructs such as
+`datetime.UTC`.
+
 Lower `requires-python` from `>=3.13` to `>=3.10` (no 3.11+ syntax is used; the
 newest construct is `str | None`) and matrix CI over Python 3.10/3.13 and Node
 18/20/22 — `engines` claims `>=18` but CI has only ever tested 20. Verify by
@@ -124,10 +128,19 @@ running the matrix, not by grepping.
 
 ### Phase 7 — Aggregate parity in Python
 
-`read_aggregate_opcua_node` is Node-only, so the README's "two interchangeable
-implementations" claim is false. Either implement it in Python with the same
-capability gating used by `read_history_opcua_node`, or drop the parity claim and
-document the gap. Implementing is preferred.
+Two parity gaps, both currently misrepresented by the README's "two
+interchangeable implementations" claim:
+
+1. `read_aggregate_opcua_node` is Node-only. Either implement it in Python with
+   the same capability gating used by `read_history_opcua_node`, or drop the
+   parity claim and document the gap. Implementing is preferred.
+2. **Out-of-range calendar dates diverge.** Node accepts `2026-02-30` and rolls
+   it over to `2026-03-02`; Python rejects it. So a history read for a
+   nonexistent date silently returns the wrong day's data on Node. Found by the
+   new unit tests and asserted there as a known divergence. The fix belongs on
+   the Node side (`toDate` should round-trip-validate the parsed components),
+   since silently returning data for a different timestamp than requested is
+   the more dangerous behaviour in an industrial context.
 
 ### Phase 8 — Docs consolidation
 

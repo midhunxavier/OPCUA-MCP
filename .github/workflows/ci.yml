@@ -15,7 +15,7 @@ jobs:
   # Fast feedback: runs in ~30s and does not need the mock OPC UA server, so it
   # reports long before the end-to-end suite finishes.
   lint:
-    name: Lint & typecheck
+    name: Lint, typecheck & unit tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,6 +52,19 @@ jobs:
         working-directory: packages/server-node
         run: npm run typecheck
 
+      # Unit tests need no mock OPC UA server: seconds, not the ~50s e2e suite.
+      - name: Build Node server
+        working-directory: packages/server-node
+        run: npm run build
+
+      - name: Unit tests (Node)
+        working-directory: packages/server-node
+        run: npm test
+
+      - name: Unit tests (Python)
+        working-directory: tests
+        run: uv run --no-sync pytest -v unit/
+
   e2e:
     name: End-to-end suite (Python + Node)
     runs-on: ubuntu-latest
@@ -80,7 +93,7 @@ jobs:
 
       - name: Run end-to-end tests
         working-directory: tests
-        run: uv run --no-sync pytest -v
+        run: uv run --no-sync pytest -v e2e/
 
   # Builds the real npm tarball and Python wheel, installs them somewhere
   # isolated, and drives the installed entry points. The rest of CI runs from the

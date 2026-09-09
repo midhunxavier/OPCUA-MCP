@@ -59,10 +59,24 @@ clean — write all logs to `stderr`.
 
 ## Running the tests
 
+Three tiers — use the narrowest one that covers your change:
+
 ```bash
-uv sync --all-packages              # one-time workspace setup
-cd tests && uv run --no-sync pytest -v   # both servers
+uv sync --all-packages                        # one-time workspace setup
+
+cd tests
+uv run --no-sync pytest unit/                 # <1s, no server needed
+uv run --no-sync pytest                       # unit + e2e (~50s)
+uv run --no-sync pytest -m smoke smoke/       # packaged artifacts (~20s)
+
+cd ../packages/server-node
+npm run build && npm test                     # Node unit tests
 ```
+
+The **smoke** tier builds the real npm tarball and Python wheel, installs them in
+isolation, and drives the installed entry points. It is the only tier that can
+see packaging faults and unbounded dependencies — both of which have shipped
+broken releases here before — so run it before any release.
 
 See [tests/README.md](tests/README.md) for details and selectors
 (`-k "[python]"` / `-k "[node]"`). For manual testing with the MCP Inspector or an AI
@@ -75,7 +89,7 @@ The tool surface is defined once in [`contract/tools.json`](contract/tools.json)
 1. **Contract** (`contract/tools.json`): add an entry under `tools` with its `name`, `description`, `inputSchema` (JSON Schema), and `capability` (`null`, or `"history"`/`"aggregate"` if it depends on a server capability).
 2. **Node** (`packages/server-node/src/index.ts`): add a `case "foo"` to the `CallToolRequestSchema` switch and implement the handler. You do **not** edit `tools/list` — it is generated from the contract. Run `npm run build` (this also stages the contract and version into `build/`).
 3. **Python** (`packages/server-python/opcua_mcp_server.py`): add a function decorated with `@mcp.tool(description=_DESC["foo"])`, with typed args (FastMCP derives the input schema from them — keep it matching the contract) and `ctx: Context`. For a capability-gated tool, register it conditionally like `read_history_opcua_node`.
-4. **Test**: add an end-to-end test in `tests/test_mcp_e2e.py` (it runs against both servers). The contract-parity test will automatically check that both servers advertise the new tool with the contract's description and parameters.
+4. **Test**: add an end-to-end test in `tests/e2e/test_mcp_e2e.py` (it runs against both servers). The contract-parity test will automatically check that both servers advertise the new tool with the contract's description and parameters.
 5. **Document it** in `docs/examples.md` (the central per-tool reference).
 
 ## Code style

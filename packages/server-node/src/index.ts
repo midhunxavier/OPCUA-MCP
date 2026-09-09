@@ -23,8 +23,8 @@ import {
   HistoryData,
   AggregateFunction,
 } from "node-opcua";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
+import { readFileSync, realpathSync } from "fs";
+import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 
 // Keep stdout pristine for the MCP stdio JSON-RPC transport: route any stray
@@ -829,6 +829,29 @@ class OPCUAMCPServer {
   }
 }
 
-// Run the server
-const server = new OPCUAMCPServer();
-server.run().catch(console.error);
+// Exported for unit tests. Importing this module must stay side-effect free
+// apart from reading build/ assets — the server is only started below, and only
+// when this file is the process entry point.
+export { toDate, OPCUAMCPServer };
+
+/** True when this module is the entry point rather than an import.
+ *
+ * `process.argv[1]` keeps the path as invoked, which for an npm-installed CLI is
+ * the `node_modules/.bin` symlink, while `import.meta.url` is always the resolved
+ * real path. Comparing them directly would therefore be false under `npx` and the
+ * server would silently never start; `realpathSync` collapses that difference.
+ */
+function isEntryPoint(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
+  const server = new OPCUAMCPServer();
+  server.run().catch(console.error);
+}

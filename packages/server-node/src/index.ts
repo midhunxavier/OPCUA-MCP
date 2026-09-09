@@ -38,11 +38,17 @@ const SERVER_URL = process.env.OPCUA_SERVER_URL || "opc.tcp://localhost:4840";
 // to build/contract.json at build time (see scripts/copy-contract.mjs) and read
 // here at runtime. Keeps tool names/descriptions/schemas in lockstep with the
 // Python server (enforced by tests/test_contract_parity.py).
+const BUILD_DIR = dirname(fileURLToPath(import.meta.url));
+
 const CONTRACT: {
   capabilities: Record<string, { nodeId: string; browseName: string; check: string }>;
   tools: Array<{ name: string; capability: string | null; description: string; inputSchema: any }>;
-} = JSON.parse(
-  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "contract.json"), "utf8")
+} = JSON.parse(readFileSync(join(BUILD_DIR, "contract.json"), "utf8"));
+
+// Version is single-sourced from package.json and staged into build/version.json
+// by scripts/prepare-build.mjs, so it can never drift from what npm publishes.
+const { version: VERSION }: { version: string } = JSON.parse(
+  readFileSync(join(BUILD_DIR, "version.json"), "utf8")
 );
 
 // Parse an optional ISO-8601 date/time string into a Date. MCP delivers these as
@@ -67,7 +73,7 @@ class OPCUAMCPServer {
     this.server = new Server(
       {
         name: "opcua-mcp-server",
-        version: "0.1.2",
+        version: VERSION,
       },
       {
         capabilities: {

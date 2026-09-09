@@ -13,6 +13,7 @@ from opcua.ua import NodeClass
 server_url = os.getenv("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
 
 import json
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 
@@ -62,8 +63,25 @@ async def opcua_lifespan(server: FastMCP) -> AsyncIterator[dict]:
         await asyncio.to_thread(client.disconnect)
         print("Disconnected from OPC UA server", file=sys.stderr)
 
-# Create an MCP server instance
-mcp = FastMCP("OPCUA-Control", lifespan=opcua_lifespan)
+def _package_version() -> str:
+    """Version of the installed distribution, single-sourced from pyproject.toml.
+
+    Falls back to "0.0.0+unknown" when running from a source tree that was never
+    installed (the distribution metadata is absent), so importing never fails.
+    """
+    try:
+        return version("opcua-mcp-server")
+    except PackageNotFoundError:
+        return "0.0.0+unknown"
+
+
+# Create an MCP server instance. The server identity must match the Node server's
+# so both runtimes present themselves as the same product to MCP clients.
+mcp = FastMCP("opcua-mcp-server", lifespan=opcua_lifespan)
+# FastMCP does not expose the protocol-level version in its constructor, so set it
+# on the underlying low-level server. Without this the Python server reports a
+# null version over MCP while the Node server reports a real one.
+mcp._mcp_server.version = _package_version()
 
 # Tool: Read the value of an OPC UA node
 @mcp.tool(description=_DESC["read_opcua_node"])

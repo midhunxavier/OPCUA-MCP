@@ -73,7 +73,7 @@ agent, see **[docs/testing.md](docs/testing.md)**.
 The tool surface is defined once in [`contract/tools.json`](contract/tools.json); both servers derive from it, and `tests/test_contract_parity.py` fails if they diverge. To add a tool `foo`:
 
 1. **Contract** (`contract/tools.json`): add an entry under `tools` with its `name`, `description`, `inputSchema` (JSON Schema), and `capability` (`null`, or `"history"`/`"aggregate"` if it depends on a server capability).
-2. **Node** (`packages/server-node/src/index.ts`): add a `case "foo"` to the `CallToolRequestSchema` switch and implement the handler. You do **not** edit `tools/list` — it is generated from the contract. Run `npm run build` (this also copies the contract into `build/`).
+2. **Node** (`packages/server-node/src/index.ts`): add a `case "foo"` to the `CallToolRequestSchema` switch and implement the handler. You do **not** edit `tools/list` — it is generated from the contract. Run `npm run build` (this also stages the contract and version into `build/`).
 3. **Python** (`packages/server-python/opcua_mcp_server.py`): add a function decorated with `@mcp.tool(description=_DESC["foo"])`, with typed args (FastMCP derives the input schema from them — keep it matching the contract) and `ctx: Context`. For a capability-gated tool, register it conditionally like `read_history_opcua_node`.
 4. **Test**: add an end-to-end test in `tests/test_mcp_e2e.py` (it runs against both servers). The contract-parity test will automatically check that both servers advertise the new tool with the contract's description and parameters.
 5. **Document it** in `docs/examples.md` (the central per-tool reference).

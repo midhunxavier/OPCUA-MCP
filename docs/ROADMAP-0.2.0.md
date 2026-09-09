@@ -56,8 +56,10 @@ ends with a green test suite — the same working style as
 Behaviour-neutral. `npx` is kept only where it is the literal command
 (`npx opcua-mcp-server`, `npx @modelcontextprotocol/inspector`).
 
-- Tests: the parametrisation `["python", "npx"]` → `["python", "node"]`, so the
-  documented selector becomes **`-k node`**; `NPX_BUILD` → `NODE_BUILD`.
+- Tests: the parametrisation `["python", "npx"]` → `["python", "node"]`;
+  `NPX_BUILD` → `NODE_BUILD`. The documented selector becomes **`-k "[node]"`**,
+  not `-k node` — plain `node` substring-matches test *names* too (it collected
+  17 of 26 tests instead of 13). Brackets pin it to the parametrisation id.
 - Docs/prose: README headings, `CONTRIBUTING.md`, `docs/*.md`, package READMEs,
   CI job names, issue/PR templates.
 - Config examples: the `opcua-npx` MCP server key → `opcua-node`.
@@ -68,10 +70,14 @@ Four copies of the version existed (`src/index.ts`, `package.json`, two
 `pyproject.toml`s). Now:
 
 - **Node** reads `build/version.json`, emitted at build time by
-  `scripts/copy-contract.mjs` — the same self-contained pattern already used for
+  `scripts/prepare-build.mjs` — the same self-contained pattern already used for
   `contract.json`.
 - **Python** uses `importlib.metadata.version()` with a source-tree fallback.
-- A guard test asserts the Node and Python versions stay in lockstep.
+- Both servers now also identify as `opcua-mcp-server` over MCP; the Python
+  server previously called itself `OPCUA-Control` and reported no version.
+- `tests/test_version_parity.py` guards all of it: manifests in lockstep, no
+  hardcoded literal in `src/index.ts`, and each running server reporting its
+  manifest version in the handshake. All three guards were mutation-tested.
 
 ### Name-claim pre-release (optional, recommended)
 
@@ -143,7 +149,7 @@ config examples into one; move `Media/ss.png` → `docs/assets/` and
    links.
 2. Add tag-triggered `publish-npm.yml` (with `--provenance`) and
    `publish-pypi.yml` (trusted publishing), retiring the manual publish that could
-   silently skip `copy-contract.mjs`.
+   silently skip `prepare-build.mjs`.
 3. Maintainer steps: configure npm OIDC / PyPI trusted publisher, push `v0.2.0`.
 4. `npm deprecate opcua-mcp-npx-server "Renamed to opcua-mcp-server — …"`.
    **Do not unpublish** — it breaks existing installs and npm blocks it after 72h.

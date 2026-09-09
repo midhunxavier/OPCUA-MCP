@@ -9,7 +9,7 @@
     "opcua-mcp": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-contract.mjs",
+    "build": "tsc && node scripts/prepare-build.mjs",
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",

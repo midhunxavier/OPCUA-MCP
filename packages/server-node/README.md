@@ -68,7 +68,7 @@ Add to your Cursor settings:
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {
@@ -86,7 +86,7 @@ Add to your Claude Desktop configuration file:
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {

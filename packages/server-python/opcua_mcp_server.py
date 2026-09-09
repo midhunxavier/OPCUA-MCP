@@ -87,7 +87,7 @@ def _parse_iso_datetime(value: str | None) -> datetime | None:
     """Parse an optional ISO-8601 string into a datetime.
 
     MCP delivers these as strings, so they are converted here before being handed
-    to the opcua client. Mirrors the npx server's ``toDate`` error wording so both
+    to the opcua client. Mirrors the Node server's ``toDate`` error wording so both
     servers reject malformed input identically.
     """
     if value is None:
@@ -102,7 +102,7 @@ def _parse_iso_datetime(value: str | None) -> datetime | None:
 
 # Tool: Read historical values of an OPC UA node.
 # Registered only when the server supports historical data access (see below),
-# mirroring the npx server's capability gating.
+# mirroring the Node server's capability gating.
 def read_history_opcua_node(node_id: str,
                             ctx: Context,
                             start_time: str | None = None,
@@ -144,7 +144,7 @@ def _server_supports_history(url: str) -> bool:
     """Probe the server's AccessHistoryDataCapability (ns=0;i=11193).
 
     Used to expose `read_history_opcua_node` only when the server actually
-    supports historical reads, matching the npx server's behaviour.
+    supports historical reads, matching the Node server's behaviour.
     """
     try:
         probe = Client(url)

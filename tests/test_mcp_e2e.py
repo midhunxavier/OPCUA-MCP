@@ -1,14 +1,15 @@
 """End-to-end tests for the OPC UA MCP servers.
 
-Each test runs against BOTH the Python and the npx MCP server (parameterised via
+Each test runs against BOTH the Python and the Node MCP server (parameterised via
 the ``mcp_session`` fixture), driving them over stdio with the official ``mcp``
 client SDK, against the mock industrial OPC UA server.
 
 Run:
     cd tests && uv run pytest -v
-    # only one implementation:
-    cd tests && uv run pytest -v -k python
-    cd tests && uv run pytest -v -k npx
+    # only one implementation (brackets match the parametrisation id, not
+    # test names — plain `-k node` would also match `test_read_opcua_node`):
+    cd tests && uv run pytest -v -k "[python]"
+    cd tests && uv run pytest -v -k "[node]"
 """
 
 from __future__ import annotations
@@ -56,10 +57,10 @@ CORE_TOOLS = {
 # Both implementations expose the history tool under the same name.
 HISTORY_TOOL = {
     "python": "read_history_opcua_node",
-    "npx": "read_history_opcua_node",
+    "node": "read_history_opcua_node",
 }
 
-NPX_BUILD = ROOT / "packages" / "server-node" / "build" / "index.js"
+NODE_BUILD = ROOT / "packages" / "server-node" / "build" / "index.js"
 
 
 def _server_params(impl: str, url: str) -> StdioServerParameters:
@@ -70,12 +71,12 @@ def _server_params(impl: str, url: str) -> StdioServerParameters:
             args=["--directory", str(ROOT), "run", "--no-sync", "opcua-mcp-server"],
             env=env,
         )
-    if impl == "npx":
-        return StdioServerParameters(command="node", args=[str(NPX_BUILD)], env=env)
+    if impl == "node":
+        return StdioServerParameters(command="node", args=[str(NODE_BUILD)], env=env)
     raise ValueError(impl)
 
 
-@pytest.fixture(params=["python", "npx"])
+@pytest.fixture(params=["python", "node"])
 def server(request, opcua_server):
     """The ``(impl_name, StdioServerParameters)`` for each server implementation.
 
@@ -84,8 +85,8 @@ def server(request, opcua_server):
     cancel scopes are not entered and exited across different tasks.
     """
     impl = request.param
-    if impl == "npx" and not NPX_BUILD.exists():
-        pytest.skip("npx server not built — run `npm install && npm run build` in packages/server-node")
+    if impl == "node" and not NODE_BUILD.exists():
+        pytest.skip("Node server not built — run `npm install && npm run build` in packages/server-node")
     return impl, _server_params(impl, opcua_server)
 
 
@@ -150,7 +151,7 @@ async def test_history_tool_exposed_when_supported(server):
 
 
 async def test_aggregate_tool_hidden_when_unsupported(server):
-    """The mock server advertises no aggregate functions, so the npx aggregate
+    """The mock server advertises no aggregate functions, so the Node aggregate
     tool must NOT be exposed (capability gating)."""
     impl, params = server
     async with connect(params) as session:
@@ -161,10 +162,10 @@ async def test_aggregate_tool_hidden_when_unsupported(server):
 async def test_aggregate_direct_call_errors_cleanly(server):
     """Calling read_aggregate_opcua_node directly (no prior tools/list) must not
     crash or wrongly report 'Invalid aggregate function' due to an empty cache —
-    it should recompute support on demand and return a clear message. npx-only."""
+    it should recompute support on demand and return a clear message. Node-only."""
     impl, params = server
-    if impl != "npx":
-        pytest.skip("aggregate tool is npx-only")
+    if impl != "node":
+        pytest.skip("aggregate tool is Node-only")
     async with connect(params) as session:
         result = await session.call_tool(
             "read_aggregate_opcua_node",
@@ -295,7 +296,7 @@ async def test_read_history(server):
 async def _browse_json(session, node_id: str):
     """Return a list of {node_id, browse_name} dicts from a browse call.
 
-    The Python server emits a Python ``repr`` of the list while the npx server
+    The Python server emits a Python ``repr`` of the list while the Node server
     emits JSON; this normalises both.
     """
     result = await session.call_tool("browse_opcua_node_children", {"node_id": node_id})

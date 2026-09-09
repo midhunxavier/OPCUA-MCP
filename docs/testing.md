@@ -15,7 +15,7 @@ Three ways to test, from fully automated to fully interactive:
 > # opc.tcp://localhost:4840/freeopcua/server/  (history enabled on all variables)
 > ```
 >
-> Build the npx server once: `cd packages/server-node && npm install && npm run build`.
+> Build the Node server once: `cd packages/server-node && npm install && npm run build`.
 
 A handy node-ID reference and per-tool examples live in [examples.md](examples.md).
 Common nodes: Temperature `ns=2;i=3`, PumpEnabled `ns=2;i=12`, ValvePosition
@@ -27,14 +27,14 @@ Common nodes: Temperature `ns=2;i=3`, PumpEnabled `ns=2;i=12`, ValvePosition
 ## 1. Automated end-to-end suite
 
 Drives **both** servers over stdio with the official `mcp` client SDK and asserts
-on real responses. 22 tests (11 cases × Python + npx).
+on real responses. 22 tests (11 cases × Python + Node).
 
 ```bash
 uv sync --all-packages         # one-time, from the repo root
 cd tests
 uv run --no-sync pytest -v
 uv run --no-sync pytest -v -k python     # only the Python server
-uv run --no-sync pytest -v -k npx        # only the npx server
+uv run --no-sync pytest -v -k "[node]"   # only the Node server
 ```
 
 The suite reuses a mock server already on `:4840`, or starts its own. See
@@ -50,7 +50,7 @@ is the standard tool for exercising an MCP server by hand.
 ### UI mode (interactive)
 
 ```bash
-# npx server
+# Node server
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
   npx @modelcontextprotocol/inspector node packages/server-node/build/index.js
 
@@ -116,13 +116,13 @@ ROOT=$(pwd)
 URL=opc.tcp://localhost:4840/freeopcua/server/
 claude mcp add opcua-python -s project -e OPCUA_SERVER_URL=$URL \
   -- uv --directory "$ROOT/packages/server-python" run opcua-mcp-server
-claude mcp add opcua-npx -s project -e OPCUA_SERVER_URL=$URL \
+claude mcp add opcua-node -s project -e OPCUA_SERVER_URL=$URL \
   -- node "$ROOT/packages/server-node/build/index.js"
 ```
 
 Then, in a **new** Claude Code session started in this directory:
 
-1. Approve `opcua-python` / `opcua-npx` when prompted (project servers require
+1. Approve `opcua-python` / `opcua-node` when prompted (project servers require
    one-time approval). You can also manage them with the `/mcp` command.
 2. Run `/mcp` to confirm both are **connected** and list their tools.
 3. Ask away — example prompts:
@@ -131,10 +131,10 @@ Then, in a **new** Claude Code session started in this directory:
    - *"Show me the last 5 temperature history readings."* → `read_history_opcua_node`
    - *"Give me a full inventory of all variables on the server."*
    - *"Start production at 60 units/hour, check the system mode, then stop it."*
-   - *"Use the opcua-npx server to read node ns=2;i=4 history between 11:00 and 12:00 UTC today."*
+   - *"Use the opcua-node server to read node ns=2;i=4 history between 11:00 and 12:00 UTC today."*
 
 > Both servers expose the same tool names (namespaced `opcua-python` /
-> `opcua-npx`); name a server in your prompt to target one specifically.
+> `opcua-node`); name a server in your prompt to target one specifically.
 
 ### Claude Desktop
 
@@ -144,7 +144,7 @@ Add to `claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "node",
       "args": ["/ABSOLUTE/PATH/OPCUA-MCP/packages/server-node/build/index.js"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840/freeopcua/server/" }

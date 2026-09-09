@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {

@@ -1,6 +1,6 @@
 # OPC UA MCP — Tool Usage Examples
 
-Concrete, tested examples for every tool exposed by the Python and npx MCP
+Concrete, tested examples for every tool exposed by the Python and Node MCP
 servers, driven against the mock **Industrial Control System** OPC UA server.
 Outputs below are real (abbreviated) responses captured end-to-end.
 
@@ -16,7 +16,7 @@ uv run --no-sync opcua-mock-server        # listens on opc.tcp://localhost:4840/
 # 2a) Python MCP server
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ uv run --no-sync opcua-mcp-server
 
-# 2b) npx MCP server
+# 2b) Node MCP server
 cd packages/server-node && npm install && npm run build
 OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ node build/index.js
 ```
@@ -159,7 +159,7 @@ Python:
 [ { "value": "26.01", "timestamp": "2026-06-05 09:55:03.382152", "status": "Good" } ]
 ```
 
-npx (also accepts ISO-8601 `start_time`/`end_time`):
+Node (also accepts ISO-8601 `start_time`/`end_time`):
 ```json
 { "node_id": "ns=2;i=3", "start_time": "2026-06-05T09:50:00Z",
   "end_time": "2026-06-05T10:30:00Z", "num_values": 3 }
@@ -171,7 +171,7 @@ npx (also accepts ISO-8601 `start_time`/`end_time`):
 ```
 > Prompt: *"Show the last 5 temperature readings from history."*
 
-### `read_aggregate_opcua_node` (npx only)
+### `read_aggregate_opcua_node` (Node only)
 Computes aggregates (Average, Minimum, Maximum, …) over a time range, one value
 per `processing_interval` (ms). **Requires a server that advertises aggregate
 functions** — the bundled mock does not, so this tool is not exposed against it.

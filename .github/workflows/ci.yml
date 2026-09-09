@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   e2e:
-    name: End-to-end suite (Python + npx)
+    name: End-to-end suite (Python + Node)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Build npx server
+      - name: Build Node server
         working-directory: packages/server-node
         run: |
           npm ci

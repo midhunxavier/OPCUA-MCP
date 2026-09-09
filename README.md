@@ -30,13 +30,13 @@ and read history. Pick whichever runtime fits your stack.
 
 ```mermaid
 flowchart LR
-    A["AI client<br/>(Claude Desktop / Code / Cursor)"] -->|MCP over stdio| B["OPC UA MCP Server<br/>(Python or npx)"]
+    A["AI client<br/>(Claude Desktop / Code / Cursor)"] -->|MCP over stdio| B["OPC UA MCP Server<br/>(Python or Node)"]
     B -->|OPC UA| C["OPC UA Server<br/>(PLC / SCADA / mock)"]
 ```
 
 ## Quick Start
 
-The fastest path — the npx server, no clone required:
+The fastest path — the Node server via `npx`, no clone required:
 
 ```bash
 npx opcua-mcp-server
@@ -47,7 +47,7 @@ Then point your MCP client at it (see [Configuration](#configuration)):
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
@@ -149,7 +149,7 @@ uv sync --all-packages
 uv run --no-sync opcua-mcp-server
 ```
 
-### NPX Version
+### Node Version
 ```bash
 # Direct usage (recommended)
 npx opcua-mcp-server
@@ -191,11 +191,11 @@ Both versions use the same environment variable:
 }
 ```
 
-### NPX Configuration Example
+### Node Configuration Example
 ```json
 {
   "mcpServers": {
-    "opcua-npx": {
+    "opcua-node": {
       "command": "npx",
       "args": ["opcua-mcp-server"],
       "env": {
@@ -214,7 +214,7 @@ Both versions use the same environment variable:
 - `cryptography>=45.0.2`: Security support
 - `httpx>=0.28.1`: HTTP client
 
-### NPX Version
+### Node Version
 - `@modelcontextprotocol/sdk`: MCP SDK for Node.js
 - `node-opcua`: Comprehensive OPC UA library
 - `typescript`: TypeScript compiler

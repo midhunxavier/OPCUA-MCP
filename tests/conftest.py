@@ -1,6 +1,6 @@
 """Shared pytest fixtures for the OPC UA MCP end-to-end suite.
 
-The suite drives the *actual* MCP servers (Python and npx) over stdio using the
+The suite drives the *actual* MCP servers (Python and Node) over stdio using the
 official `mcp` client SDK, pointed at the mock industrial OPC UA server. A single
 session-scoped fixture makes sure a mock server is available: if one is already
 listening on :4840 it is reused, otherwise one is started for the test session.

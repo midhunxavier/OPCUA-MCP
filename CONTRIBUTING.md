@@ -1,7 +1,7 @@
 # Contributing to OPC UA MCP
 
 Thanks for your interest in contributing! This repo provides **two MCP servers**
-(Python and TypeScript/npx) that bridge AI assistants to OPC UA servers, plus a
+(Python and TypeScript/Node) that bridge AI assistants to OPC UA servers, plus a
 **mock industrial OPC UA server** for local development and testing.
 
 - **[docs/testing.md](docs/testing.md)** — how to test (automated suite, MCP Inspector, AI agents)
@@ -13,12 +13,12 @@ Thanks for your interest in contributing! This repo provides **two MCP servers**
 |------|------------|
 | `packages/mock-server/` | Mock "Industrial Control System" OPC UA server (the simulated PLC/sensors) |
 | `packages/server-python/` | **Python** MCP server (FastMCP + `opcua`/FreeOpcUa) |
-| `packages/server-node/` | **npx** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
+| `packages/server-node/` | **Node** MCP server (TypeScript + `@modelcontextprotocol/sdk` + `node-opcua`) |
 | `tests/` | End-to-end pytest suite driving both servers via the `mcp` SDK |
 | `docs/` | Usage and testing docs (`examples.md`, `testing.md`) |
 
 ```
-AI assistant / MCP client  ──stdio──►  MCP server (Python OR npx)  ──OPC UA/TCP──►  mock server :4840
+AI assistant / MCP client  ──stdio──►  MCP server (Python OR Node)  ──OPC UA/TCP──►  mock server :4840
 ```
 
 The two MCP servers share a single tool contract ([`contract/tools.json`](contract/tools.json)): the Node server builds its `tools/list` from it and the Python server reads descriptions and capability node IDs from it, so they cannot drift (`tests/test_contract_parity.py` enforces this).
@@ -45,7 +45,7 @@ OPCUA_SERVER_URL=opc.tcp://localhost:4840/freeopcua/server/ \
   uv run --no-sync opcua-mcp-server
 ```
 
-### npx MCP server
+### Node MCP server
 ```bash
 cd packages/server-node
 npm install
@@ -65,7 +65,7 @@ cd tests && uv run --no-sync pytest -v   # both servers
 ```
 
 See [tests/README.md](tests/README.md) for details and selectors
-(`-k python` / `-k npx`). For manual testing with the MCP Inspector or an AI
+(`-k "[python]"` / `-k "[node]"`). For manual testing with the MCP Inspector or an AI
 agent, see **[docs/testing.md](docs/testing.md)**.
 
 ## Adding a new MCP tool

@@ -17,7 +17,7 @@ import json
 import pytest
 
 from conftest import ROOT
-from test_mcp_e2e import _server_params, connect, NPX_BUILD
+from test_mcp_e2e import _server_params, connect, NODE_BUILD
 
 CONTRACT = json.loads((ROOT / "contract" / "tools.json").read_text())
 
@@ -32,11 +32,11 @@ def _props_required(schema: dict) -> tuple[set, set]:
     return set(schema.get("properties", {})), set(schema.get("required", []))
 
 
-@pytest.fixture(params=["python", "npx"])
+@pytest.fixture(params=["python", "node"])
 def impl_params(request, opcua_server):
     impl = request.param
-    if impl == "npx" and not NPX_BUILD.exists():
-        pytest.skip("npx server not built")
+    if impl == "node" and not NODE_BUILD.exists():
+        pytest.skip("Node server not built")
     return impl, _server_params(impl, opcua_server)
 
 

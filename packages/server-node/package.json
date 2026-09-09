@@ -13,6 +13,9 @@
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -42,6 +45,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.0.0"
   },
   "engines": {
@@ -51,4 +55,4 @@
     "build/**/*",
     "README.md"
   ]
-} 
+}

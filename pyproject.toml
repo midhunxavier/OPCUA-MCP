@@ -1,2 +1,26 @@
 [tool.uv.workspace]
 members = ["packages/mock-server", "packages/server-python", "tests"]
+
+[dependency-groups]
+dev = ["ruff>=0.14"]
+
+# --- Lint & format -----------------------------------------------------------
+# Ruff covers both, replacing a separate flake8/isort/black stack. Run:
+#   uv run ruff check .          # lint
+#   uv run ruff format .         # format
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["packages/server-node/build", "packages/server-node/node_modules"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I isort, UP pyupgrade, B bugbear, SIM simplify,
+# RUF ruff-specific. Deliberately excludes BLE (blind-except): MCP tool handlers
+# catch broad exceptions on purpose, to return a readable error to the model
+# rather than tear down the stdio transport.
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests reach into a sibling module by name (they run with the tests/ dir on
+# sys.path), and pytest fixtures legitimately shadow their own names.
+"tests/*" = ["E402"]

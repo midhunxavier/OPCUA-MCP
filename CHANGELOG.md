@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- Artifact smoke tests (`tests/smoke/`): build the npm tarball and the Python
+  wheel, install each into an isolated location, and drive the installed entry
+  point over MCP from a working directory outside the repo. Run as their own CI
+  job; deselected from the default suite with `-m "not smoke"`.
 - Lint, format and typecheck gates: ruff for Python, Prettier + `tsc --noEmit`
   for TypeScript, wired into a fast `lint` CI job that runs alongside the
   end-to-end suite. Plus `.editorconfig`, Dependabot, `CODEOWNERS` and an issue
@@ -42,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and CI workflow.
 
 ### Fixed
+- **The Python server no longer breaks on a fresh install.** Its `mcp[cli]>=1.9.1`
+  dependency had no upper bound, so a clean `pip`/`uvx` install resolved mcp 2.x,
+  where `FastMCP` was renamed to `MCPServer` — the server then died on import with
+  `ModuleNotFoundError: No module named 'mcp.server.fastmcp'`. Pinned to `<2`.
+  The committed `uv.lock` pinned 1.x, so every existing test and CI run passed
+  while installs from the published package would have failed; the new artifact
+  smoke tests are what surfaced it.
 - Boolean and value handling across the server and clients.
 - OPC UA method calls.
 - Python `read_history_opcua_node` now takes `start_time`/`end_time` as ISO-8601

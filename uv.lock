@@ -421,7 +421,7 @@ dependencies = [
 requires-dist = [
     { name = "cryptography", specifier = ">=45.0.2" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.9.1" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.9.1,<2" },
     { name = "opcua", specifier = ">=0.98.13" },
 ]
 
@@ -440,7 +440,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "anyio", specifier = ">=4.0" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.9.1" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.9.1,<2" },
     { name = "opcua", specifier = ">=0.98.13" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.24" },

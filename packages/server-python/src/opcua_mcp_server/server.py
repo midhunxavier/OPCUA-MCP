@@ -6,14 +6,16 @@ import asyncio
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
-from opcua import Client
+from opcua import Client, ua
 from opcua.ua import NodeClass
 
-from .capabilities import server_supports_history
+from .aggregates import aggregate_node_id, validate_aggregate_function
+from .capabilities import server_aggregate_functions, server_supports_history
 from .config import SERVER_URL
 from .contract import DESC
 from .datetimes import parse_iso_datetime
@@ -123,6 +125,68 @@ def read_history_opcua_node(
 if server_supports_history(SERVER_URL):
     read_history_opcua_node = mcp.tool(description=DESC["read_history_opcua_node"])(
         read_history_opcua_node
+    )
+
+
+# Tool: Read server-computed aggregates over a node's history.
+# Registered only when the server advertises aggregate functions, mirroring the
+# Node server's capability gating.
+_AGGREGATE_FUNCTIONS: list[str] = server_aggregate_functions(SERVER_URL)
+
+
+def read_aggregate_opcua_node(
+    node_id: str,
+    start_time: str,
+    aggregate_function: str,
+    ctx: Context,
+    end_time: str | None = None,
+    processing_interval: float = 0,
+) -> list[dict]:
+    """
+    Calculate historical aggregates over a time range, in fixed-size intervals.
+
+    Parameters:
+        node_id (str): The OPC UA node ID in the format 'ns=<namespace>;i=<identifier>'.
+                       Example: 'ns=2;i=2'.
+        start_time (str): Beginning of the retrieval (ISO 8601).
+        aggregate_function (str): The specific formula, e.g. 'Average'.
+        end_time (str): End of the retrieval (ISO 8601, defaults to 'now').
+        processing_interval (float): Duration (ms) for each computed value. 0 asks
+                                     the server for a single value over the range.
+
+    Returns:
+        list[dict]: One entry per interval, shaped
+            `{ "value": <value>, "timestamp": <timestamp>, "status": <status> }`
+    """
+    validate_aggregate_function(aggregate_function, _AGGREGATE_FUNCTIONS)
+
+    client = ctx.request_context.lifespan_context["opcua_client"]
+    node = client.get_node(node_id)
+
+    details = ua.ReadProcessedDetails()
+    details.StartTime = parse_iso_datetime(start_time)
+    details.EndTime = parse_iso_datetime(end_time) or datetime.now(timezone.utc)
+    details.ProcessingInterval = processing_interval
+    details.AggregateType = [aggregate_node_id(aggregate_function)]
+    details.AggregateConfiguration = ua.AggregateConfiguration(UseServerCapabilitiesDefaults=True)
+
+    result = node.history_read(details)
+    if result.StatusCode.is_bad():
+        raise ValueError(f"Read aggregate failed with status: {result.StatusCode.name}")
+
+    return [
+        {
+            "value": str(v.Value.Value),
+            "timestamp": str(v.SourceTimestamp),
+            "status": str(v.StatusCode.name),
+        }
+        for v in result.HistoryData.DataValues
+    ]
+
+
+if _AGGREGATE_FUNCTIONS:
+    read_aggregate_opcua_node = mcp.tool(description=DESC["read_aggregate_opcua_node"])(
+        read_aggregate_opcua_node
     )
 
 

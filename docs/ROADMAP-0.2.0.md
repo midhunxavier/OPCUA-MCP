@@ -46,7 +46,7 @@ ends with a green test suite — the same working style as
 | 4 | Unit-test layer | low | ✅ done |
 | 5 | Packaging correctness + module split | **high** | ✅ done |
 | 6 | Python floor + CI matrix | medium | ✅ done |
-| 7 | Aggregate parity in Python | medium | ☐ |
+| 7 | Parity: aggregate tool + date handling | medium | ✅ done |
 | 8 | Docs consolidation | low | ☐ |
 | 9 | Repo furniture | low | ✅ done |
 | 10 | 0.2.0 release + publish | **irreversible** | ☐ |

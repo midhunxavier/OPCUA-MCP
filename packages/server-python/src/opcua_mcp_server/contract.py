@@ -39,3 +39,4 @@ def load_contract() -> dict:
 CONTRACT = load_contract()
 DESC = {t["name"]: t["description"] for t in CONTRACT["tools"]}
 HISTORY_NODE_ID = CONTRACT["capabilities"]["history"]["nodeId"]
+AGGREGATE_NODE_ID = CONTRACT["capabilities"]["aggregate"]["nodeId"]

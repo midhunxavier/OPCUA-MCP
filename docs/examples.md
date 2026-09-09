@@ -171,7 +171,7 @@ Node (also accepts ISO-8601 `start_time`/`end_time`):
 ```
 > Prompt: *"Show the last 5 temperature readings from history."*
 
-### `read_aggregate_opcua_node` (Node only)
+### `read_aggregate_opcua_node`
 Computes aggregates (Average, Minimum, Maximum, …) over a time range, one value
 per `processing_interval` (ms). **Requires a server that advertises aggregate
 functions** — the bundled mock does not, so this tool is not exposed against it.

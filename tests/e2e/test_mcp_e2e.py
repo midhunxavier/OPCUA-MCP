@@ -165,10 +165,19 @@ async def test_aggregate_tool_hidden_when_unsupported(server):
 async def test_aggregate_direct_call_errors_cleanly(server):
     """Calling read_aggregate_opcua_node directly (no prior tools/list) must not
     crash or wrongly report 'Invalid aggregate function' due to an empty cache —
-    it should recompute support on demand and return a clear message. Node-only."""
+    it should recompute support on demand and return a clear message.
+
+    Node-only, but no longer because Python lacks the tool: both runtimes now
+    implement it and both correctly hide it here, since the mock advertises no
+    aggregate functions. The difference is what a *direct* call to a hidden tool
+    does. The Node server keeps the handler reachable and returns the capability
+    message; FastMCP dispatches only registered tools, so Python answers
+    'Unknown tool'. Both are defensible; the contract only governs what
+    tools/list advertises.
+    """
     impl, params = server
     if impl != "node":
-        pytest.skip("aggregate tool is Node-only")
+        pytest.skip("direct calls to unregistered tools are Node-only behaviour")
     async with connect(params) as session:
         result = await session.call_tool(
             "read_aggregate_opcua_node",

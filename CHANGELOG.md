@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uv workspace.
 
 ### Added
+- `read_aggregate_opcua_node` is now implemented on the **Python** server too,
+  with the same capability gating and the same error wording as the Node server.
+  It was previously Node-only, which made the README's "two interchangeable
+  implementations" claim untrue.
 - **Python 3.10+ is now supported** (was 3.13+). Nothing in the codebase needed
   3.11 or newer; the floor simply excluded most installed Pythons, including the
   3.9–3.11 common in industrial environments. Verified by installing and driving
@@ -74,14 +78,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and CI workflow.
 
 ### Known issues
-- The two servers disagree on out-of-range calendar dates. The Node server
-  accepts `2026-02-30` and silently rolls it over to `2026-03-02` (V8 `Date`
-  semantics), while the Python server rejects it. A history read for a
-  nonexistent date therefore returns data for the wrong day instead of erroring.
-  Asserted in `packages/server-node/test/unit.test.mjs` so it cannot change
-  unnoticed; the fix is tracked with the rest of the parity work.
+- Neither server's aggregate *happy path* has end-to-end coverage: the bundled
+  mock OPC UA server advertises no aggregate functions, so the tool is gated off
+  in the suite on both runtimes. The name/node-ID mapping and the validation
+  messages are unit-tested; the read itself is not. Giving the mock aggregate
+  support would close this.
 
 ### Fixed
+- **The Node server no longer silently returns data for the wrong day.**
+  `toDate` relied on V8's `Date` parser, which rolls an out-of-range day over
+  into the next month, so a history read for `2026-02-30` quietly returned
+  `2026-03-02` data instead of failing. It now validates the calendar date
+  arithmetically — which also restores parity with the Python server, whose
+  `datetime.fromisoformat` always rejected these.
 - **The Python server no longer breaks on a fresh install.** Its `mcp[cli]>=1.9.1`
   dependency had no upper bound, so a clean `pip`/`uvx` install resolved mcp 2.x,
   where `FastMCP` was renamed to `MCPServer` — the server then died on import with

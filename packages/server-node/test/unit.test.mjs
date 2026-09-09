@@ -51,14 +51,27 @@ describe("toDate", () => {
     assert.throws(() => toDate("2026-13-01T00:00:00Z"), /Invalid date\/time/);
   });
 
-  // KNOWN DIVERGENCE from the Python server, asserted here so it cannot change
-  // unnoticed. V8's Date parser rolls an out-of-range day over into the next
-  // month, so the Node server silently accepts 2026-02-30 as 2026-03-02, while
-  // Python's datetime.fromisoformat raises "day is out of range for month".
-  // A history read for a nonexistent date therefore returns real data for the
-  // wrong day instead of erroring. Tracked as parity work (roadmap phase 7).
-  test("KNOWN DIVERGENCE: rolls an out-of-range day over instead of rejecting", () => {
-    assert.equal(toDate("2026-02-30T00:00:00Z").toISOString(), "2026-03-02T00:00:00.000Z");
+  // Was a divergence from the Python server: V8 rolls an out-of-range day over
+  // into the next month, so this silently returned data for 2026-03-02. Python's
+  // datetime.fromisoformat rejects it, and now so does this.
+  test("rejects an out-of-range day instead of rolling it over", () => {
+    assert.throws(() => toDate("2026-02-30T00:00:00Z"), /Invalid date\/time/);
+    assert.throws(() => toDate("2026-04-31T00:00:00Z"), /Invalid date\/time/);
+  });
+
+  test("accepts a real leap day and rejects a fake one", () => {
+    assert.equal(toDate("2028-02-29T00:00:00Z").toISOString(), "2028-02-29T00:00:00.000Z");
+    assert.throws(() => toDate("2026-02-29T00:00:00Z"), /Invalid date\/time/);
+  });
+
+  test("accepts a two-digit-looking year (no Date.UTC 1900s remapping)", () => {
+    assert.equal(toDate("0026-01-15T00:00:00Z").toISOString(), "0026-01-15T00:00:00.000Z");
+  });
+
+  test("a timezone offset that shifts the UTC date is still accepted", () => {
+    // 2026-03-01T01:00+02:00 is 2026-02-28T23:00Z — the UTC day differs from the
+    // string's day, which must not be mistaken for an impossible date.
+    assert.equal(toDate("2026-03-01T01:00:00+02:00").toISOString(), "2026-02-28T23:00:00.000Z");
   });
 });
 

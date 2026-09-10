@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 from contextlib import asynccontextmanager
 
 import pytest
@@ -59,6 +60,11 @@ HISTORY_TOOL = {
 }
 
 NODE_BUILD = ROOT / "packages" / "server-node" / "build" / "index.js"
+
+# ISO-8601 UTC, as `resultShapes.historyRecords` requires: a trailing `Z`, and no
+# space-separated `str(datetime)` form. Sub-second digits vary by runtime
+# (microseconds from Python, milliseconds from Node), which the contract allows.
+ISO_UTC_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$")
 
 
 def _server_params(impl: str, url: str) -> StdioServerParameters:
@@ -109,6 +115,27 @@ def text_of(result) -> str:
         if text is not None:
             parts.append(text)
     return "\n".join(parts)
+
+
+def records_of(result) -> list[dict]:
+    """Parse a history-family response into its records.
+
+    Both servers emit one JSON object per content block, shaped by the contract's
+    ``resultShapes.historyRecords``, so this needs no per-implementation branch.
+    It used to: the Node server returned a single array of raw node-opcua
+    ``DataValue``s (``{"statusCode": {"value": 1}, "sourceTimestamp": …}``) while
+    the Python server returned flat records, and a caller had to know which
+    server it was talking to (issue #23).
+    """
+    records = []
+    for block in result.content:
+        text = getattr(block, "text", None)
+        assert text is not None, f"non-text block in a history response: {block!r}"
+        try:
+            records.append(json.loads(text))
+        except json.JSONDecodeError as exc:  # pragma: no cover - failure path
+            raise AssertionError(f"history block is not JSON: {text!r}") from exc
+    return records
 
 
 async def tool_names(session) -> set[str]:
@@ -292,17 +319,40 @@ async def test_call_method_start_then_stop(server):
 
 
 async def test_read_history(server):
-    """Read recent history for the Temperature sensor and assert we get records."""
+    """Read recent history for the Temperature sensor and assert the canonical shape.
+
+    Both servers must return the same records, field for field — see
+    ``contract/tools.json`` -> ``resultShapes.historyRecords``. The schema-driven
+    version of this check is in ``test_contract_parity.py``; what is asserted
+    here is that real history reads through it correctly on both runtimes.
+    """
     impl, params = server
     async with connect(params) as session:
         result = await session.call_tool(
             HISTORY_TOOL[impl], {"node_id": NODE["Temperature"], "num_values": 5}
         )
     assert not result.isError, text_of(result)
-    text = text_of(result)
-    # Both implementations surface a Good status and a timestamp per record.
-    assert "Good" in text or "sourceTimestamp" in text or "timestamp" in text
-    assert text.strip() not in ("", "[]")
+
+    records = records_of(result)
+    assert records, f"{impl}: no history records returned"
+    assert len(records) <= 5, f"{impl}: num_values=5 returned {len(records)} records"
+    for record in records:
+        assert set(record) == {"value", "timestamp", "status"}, (
+            f"{impl}: record fields {sorted(record)} are not the contract's"
+        )
+        assert record["status"] == "Good", f"{impl}: unexpected status: {record}"
+        # Temperature is a Double. `bool` is excluded because it is an `int` in
+        # Python, and JSON has no integer/float distinction — a whole number
+        # arrives as `int` from the Node server and `float` from the Python one.
+        assert isinstance(record["value"], (int, float)) and not isinstance(
+            record["value"], bool
+        ), f"{impl}: value is not a number: {record!r}"
+        assert ISO_UTC_TIMESTAMP.match(record["timestamp"]), (
+            f"{impl}: timestamp is not ISO-8601 UTC: {record['timestamp']!r}"
+        )
+
+    # Not asserted: ordering. Given `num_values` alone, an OPC UA server reads
+    # backwards from now, and both servers pass that ordering through unchanged.
 
 
 # --- browse parsing (server output formats differ) -----------------------------

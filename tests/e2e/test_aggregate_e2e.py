@@ -16,13 +16,21 @@ Run:
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timedelta, timezone
 from itertools import pairwise
 
 import pytest
 from conftest import AGGREGATE_NODE_ID, AGGREGATE_RAMP_PER_SECOND
-from test_mcp_e2e import NODE_BUILD, _server_params, connect, text_of, tool_names
+from test_contract_parity import assert_matches_result_shape
+from test_mcp_e2e import (
+    ISO_UTC_TIMESTAMP,
+    NODE_BUILD,
+    _server_params,
+    connect,
+    records_of,
+    text_of,
+    tool_names,
+)
 
 AGGREGATE_TOOL = "read_aggregate_opcua_node"
 
@@ -52,31 +60,18 @@ def iso_utc(offset_seconds: int = 0) -> str:
     return moment.isoformat().replace("+00:00", "Z")
 
 
-def aggregate_values(result, impl: str) -> list[float | None]:
-    """Extract the per-bucket values from an aggregate result.
+def aggregate_values(result) -> list[float | None]:
+    """The per-bucket values of an aggregate result, ``None`` for an empty bucket.
 
-    The two servers return different shapes for the history family (see #23), so
-    this normalises both to a list of floats with ``None`` for empty buckets.
+    Both servers emit the contract's ``historyRecords`` shape, so this needs no
+    per-implementation branch — it used to, because the Node server returned raw
+    node-opcua ``DataValue`` JSON and stringified nothing while the Python server
+    reported an empty bucket as the string ``"None"`` (issue #23).
     """
-    if impl == "python":
-        values: list[float | None] = []
-        for block in result.content:
-            text = getattr(block, "text", None)
-            if not text or not text.strip().startswith("{"):
-                continue
-            raw = json.loads(text).get("value")
-            values.append(None if raw in (None, "None") else float(raw))
-        return values
-
-    # Node returns a single JSON array of DataValues; empty buckets carry no value.
-    values = []
-    for data_value in json.loads(text_of(result)):
-        raw = (data_value.get("value") or {}).get("value")
-        values.append(None if raw is None else float(raw))
-    return values
+    return [record["value"] for record in records_of(result)]
 
 
-async def read_average(session, impl, *, window_seconds, interval_ms, end_time="explicit"):
+async def read_average(session, *, window_seconds, interval_ms, end_time="explicit"):
     """Read Average over the last ``window_seconds``, bucketed by ``interval_ms``."""
     arguments = {
         "node_id": AGGREGATE_NODE_ID,
@@ -87,7 +82,7 @@ async def read_average(session, impl, *, window_seconds, interval_ms, end_time="
     if end_time == "explicit":
         arguments["end_time"] = iso_utc()
     result = await session.call_tool(AGGREGATE_TOOL, arguments)
-    return result, aggregate_values(result, impl)
+    return result, aggregate_values(result)
 
 
 # --- tests ---------------------------------------------------------------------
@@ -111,11 +106,17 @@ async def test_aggregate_average_values_are_correct(agg_server):
     impl, params = agg_server
     interval_ms = 5000
     async with connect(params) as session:
-        result, values = await read_average(
-            session, impl, window_seconds=20, interval_ms=interval_ms
-        )
+        result, values = await read_average(session, window_seconds=20, interval_ms=interval_ms)
 
     assert not result.isError, text_of(result)
+    records = records_of(result)
+    # The aggregate tool shares the history tool's record shape (contract ->
+    # resultShapes.historyRecords); both servers must produce it.
+    assert_matches_result_shape(records, "historyRecords", f"{impl}/{AGGREGATE_TOOL}")
+    assert all(ISO_UTC_TIMESTAMP.match(r["timestamp"]) for r in records), (
+        f"{impl}: bucket timestamps are not ISO-8601 UTC: {[r['timestamp'] for r in records]}"
+    )
+
     populated = [v for v in values if v is not None]
     assert len(populated) >= 3, f"{impl}: too few populated buckets: {values}"
 
@@ -147,7 +148,6 @@ async def test_aggregate_default_end_time_is_utc(agg_server):
     async with connect(skewed) as session:
         result, values = await read_average(
             session,
-            impl,
             window_seconds=window_seconds,
             interval_ms=interval_ms,
             end_time="default",

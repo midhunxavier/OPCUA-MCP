@@ -19,6 +19,7 @@ from .capabilities import server_aggregate_functions, server_supports_history
 from .config import SERVER_URL
 from .contract import DESC
 from .datetimes import parse_iso_datetime
+from .records import history_records
 
 
 # Manage the lifecycle of the OPC UA client connection
@@ -101,8 +102,10 @@ def read_history_opcua_node(
         num_values (int): Number of values to read (default: unlimited)
 
     Returns:
-        list[dict]: An array of values shaped
-            `{ "value": <value>, "timestamp": <timestamp>, "status": "Good" }`
+        list[dict]: One record per historical value, shaped
+            `{ "value": <value>, "timestamp": "<ISO-8601 UTC>", "status": "Good" }`
+            — the shared shape defined in `contract/tools.json`
+            (`resultShapes.historyRecords`) and matched by the Node server.
     """
     client = ctx.request_context.lifespan_context["opcua_client"]
     node = client.get_node(node_id)
@@ -111,14 +114,7 @@ def read_history_opcua_node(
         endtime=parse_iso_datetime(end_time),
         numvalues=num_values,
     )
-    return [
-        {
-            "value": str(v.Value.Value),
-            "timestamp": str(v.SourceTimestamp),
-            "status": str(v.StatusCode.name),
-        }
-        for v in values
-    ]
+    return history_records(values)
 
 
 # Conditionally register the history tool based on server capability.
@@ -155,8 +151,12 @@ def read_aggregate_opcua_node(
                                      the server for a single value over the range.
 
     Returns:
-        list[dict]: One entry per interval, shaped
-            `{ "value": <value>, "timestamp": <timestamp>, "status": <status> }`
+        list[dict]: One record per interval, shaped
+            `{ "value": <value>, "timestamp": "<ISO-8601 UTC>", "status": "Good" }`
+            — the shared shape defined in `contract/tools.json`
+            (`resultShapes.historyRecords`) and matched by the Node server. An
+            interval the server holds no data for has a null `value` and a
+            non-Good `status`.
     """
     # Re-probe rather than trusting the import-time snapshot: a server may gain or
     # lose aggregate support while this process is running, and answering from a
@@ -179,14 +179,7 @@ def read_aggregate_opcua_node(
         if not result.StatusCode.is_good():
             raise ValueError(f"Read aggregate failed with status: {result.StatusCode}")
 
-        return [
-            {
-                "value": str(v.Value.Value),
-                "timestamp": str(v.SourceTimestamp),
-                "status": str(v.StatusCode.name),
-            }
-            for v in result.HistoryData.DataValues
-        ]
+        return history_records(result.HistoryData.DataValues)
     except Exception as e:
         raise ValueError(f"Failed to read node {node_id}: {e!s}") from e
 

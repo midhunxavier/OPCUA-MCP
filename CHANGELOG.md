@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Corrected the READMEs for the published packages: the PyPI long description
+  claimed Python 3.13+ (the floor is 3.10), had no install instructions for the
+  published package, and linked with `../../` relative paths that are dead links
+  when rendered on PyPI — as does the npm one. The root README carried a
+  hardcoded personal path in a config example and invented tool output that
+  matched nothing the server produces.
+
+  **These reach npmjs.com and pypi.org only on the next release**, because each
+  package's README ships inside its artifact and registry pages are frozen per
+  version.
+
 ## [0.2.1] — 2026-09-09
 
 Completes the 0.2.0 release. **0.2.0 reached npm only** — the PyPI job failed to

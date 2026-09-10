@@ -18,6 +18,15 @@ Neither registry is configured yet; both are needed before the first release.
 3. Create the `pypi` GitHub environment (optionally with a required reviewer, so
    a publish needs an explicit approval).
 
+## A note on READMEs
+
+Each package's README ships *inside* its artifact — `files: [..., "README.md"]`
+for npm, `readme = "README.md"` for the wheel — and registry pages are frozen per
+version. So edits to `packages/server-node/README.md` or
+`packages/server-python/README.md` appear on GitHub immediately but do not reach
+npmjs.com or pypi.org until the next publish. Worth checking those two files
+before cutting a release.
+
 ## Cutting a release
 
 ```bash

@@ -5,6 +5,7 @@
 **Read industrial sensors and control equipment on any OPC UA server — through natural language with Claude and any MCP client.**
 
 [![npm version](https://img.shields.io/npm/v/opcua-mcp-server)](https://www.npmjs.com/package/opcua-mcp-server)
+[![PyPI version](https://img.shields.io/pypi/v/opcua-mcp-server)](https://pypi.org/project/opcua-mcp-server/)
 [![npm downloads](https://img.shields.io/npm/dm/opcua-mcp-server)](https://www.npmjs.com/package/opcua-mcp-server)
 [![CI](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/midhunxavier/OPCUA-MCP/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/midhunxavier/OPCUA-MCP)](LICENSE)
@@ -15,7 +16,7 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple)](https://modelcontextprotocol.io)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#quick-start) · [Examples](docs/examples.md) · [Architecture](docs/architecture.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md) · [npm package](https://www.npmjs.com/package/opcua-mcp-server)
+[Quick Start](#quick-start) · [Tools](#tools) · [Examples](docs/examples.md) · [Architecture](docs/architecture.md) · [Testing](docs/testing.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -24,9 +25,9 @@
 ## Overview
 
 Two interchangeable implementations — **Python** and **TypeScript/Node** — expose
-the same OPC UA operations as MCP tools. Both connect to any OPC UA server and let
-an AI assistant read nodes, write values, browse the address space, call methods,
-and read history. Pick whichever runtime fits your stack.
+the same OPC UA operations as MCP tools: read and write nodes, browse the address
+space, call methods, and read history and server-side aggregates. Both connect to
+any OPC UA server. Pick whichever runtime fits your stack.
 
 ```mermaid
 flowchart LR
@@ -36,19 +37,30 @@ flowchart LR
 
 ## Quick Start
 
-The fastest path — the Node server via `npx`, no clone required:
+Nothing to clone or install — add one of these to your MCP client config and
+point `OPCUA_SERVER_URL` at your OPC UA endpoint.
 
-```bash
-npx opcua-mcp-server
-```
-
-Then point your MCP client at it (see [Configuration](#configuration)):
+**Node** (via `npx`):
 
 ```json
 {
   "mcpServers": {
-    "opcua-node": {
+    "opcua": {
       "command": "npx",
+      "args": ["-y", "opcua-mcp-server"],
+      "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
+    }
+  }
+}
+```
+
+**Python** (via [`uvx`](https://docs.astral.sh/uv/)):
+
+```json
+{
+  "mcpServers": {
+    "opcua": {
+      "command": "uvx",
       "args": ["opcua-mcp-server"],
       "env": { "OPCUA_SERVER_URL": "opc.tcp://localhost:4840" }
     }
@@ -56,188 +68,174 @@ Then point your MCP client at it (see [Configuration](#configuration)):
 }
 ```
 
-Prefer Python, or want the full install matrix? See
-[Deployment & Installation](#deployment--installation).
+For Claude Code, one command does it:
 
-
-## Example Usage in Conversation
-
-Once configured, you can ask Claude to perform real-world OPC UA operations:
-
-### Reading Sensor Values
-- "What is the current temperature reading from the reactor vessel?"
-- "Check the pressure level in Tank A"
-- "Read all temperature sensors in the cooling system"
-- "Get the current flow rate on production line B"
-
-### Controlling Equipment
-- "Turn on the conveyor motor"
-- "Set the mixer speed to 80 RPM"
-- "Open valve V-101 to 75% position"
-- "Start the circulation pump"
-- "Set the heating element to 150°C"
-
-### Production Operations
-- "Start production on line 1 with rate 100 units/hour"
-- "Stop all motors in emergency mode"
-- "Initialize the batch reactor with recipe A"
-- "Begin the cleaning cycle for Tank B"
-
-### System Monitoring
-- "Show me all alarm states in the system"
-- "Read all sensor values from the water treatment plant"
-- "Check the status of all pumps and motors"
-- "Get the energy consumption readings"
-- "Discover all available variables in the OPC UA server"
-- "Show me a complete inventory of all sensors and actuators"
-
-### Real Example Scenarios
-```
-User: "What's the temperature in reactor R-101?"
-Assistant: I'll read the temperature sensor for reactor R-101.
-Tool call: read_opcua_node with node_id "ns=2;i=11"
-Result: "Reactor R-101 temperature: 87.3°C"
-
-User: "Turn on the main conveyor motor"
-Assistant: I'll start the main conveyor motor for you.
-Tool call: write_opcua_node with node_id "ns=2;i=12" and value "true"
-Result: "Main conveyor motor started successfully"
-
-User: "Set the pump speed to 65%"
-Assistant: I'll adjust the pump speed to 65%.
-Tool call: write_opcua_node with node_id "ns=2;i=13" and value "65"
-Result: "Pump speed set to 65%"
-
-User: "Show me all available variables in the system"
-Assistant: I'll get a complete list of all variables in the OPC UA server.
-Tool call: get_all_variables
-Result: "Found 15 variables:
-- Name: Temperature_Sensor_01, NodeID: ns=2;i=101, Value: 87.3°C
-- Name: Pressure_Sensor_01, NodeID: ns=2;i=102, Value: 2.5 bar
-- Name: Flow_Rate_01, NodeID: ns=2;i=103, Value: 125.8 L/min
-..."
+```bash
+claude mcp add opcua -e OPCUA_SERVER_URL=opc.tcp://localhost:4840 -- npx -y opcua-mcp-server
 ```
 
-## Implementation Languages
+> **No OPC UA server to hand?** This repo ships a mock industrial plant — see
+> [Try it against the mock](#try-it-against-the-mock).
 
-Both are published as **`opcua-mcp-server`** (npm and PyPI), speak MCP over
-**stdio**, and expose the identical tool surface. Pick whichever fits your stack.
+## Tools
+
+Both servers expose the same nine tools, defined once in
+[`contract/tools.json`](contract/tools.json) so they cannot drift apart.
+
+| Tool | What it does |
+|---|---|
+| `read_opcua_node` | Read a single node's value |
+| `write_opcua_node` | Write a value to a node |
+| `read_multiple_opcua_nodes` | Batch read |
+| `write_multiple_opcua_nodes` | Batch write |
+| `browse_opcua_node_children` | List a node's children |
+| `call_opcua_method` | Invoke a method on an object node |
+| `get_all_variables` | Inventory every variable in the address space |
+| `read_history_opcua_node` † | Read historical, timestamped values |
+| `read_aggregate_opcua_node` † | Server-computed aggregates (Average, Min, Max, …) |
+
+† **Capability-gated.** These appear only when the connected server advertises
+support — history via `AccessHistoryDataCapability`, aggregates via a non-empty
+`AggregateFunctions` folder. Against a server without them, the tools are simply
+not offered rather than failing at call time.
+
+Full per-tool reference with inputs, outputs and a node-ID map:
+**[docs/examples.md](docs/examples.md)**.
+
+## Example usage in conversation
+
+Once configured, you can ask in plain language:
+
+- *"What's the current temperature reading from the reactor vessel?"*
+- *"Set the valve position to 80%"*
+- *"Show me all available variables in the system"*
+- *"What was the temperature over the last hour?"*
+- *"Start production on line 1 at 100 units/hour"*
+- *"Give me the hourly average temperature for today"*
+
+Real responses from the bundled mock plant, via the published package:
+
+```
+read_opcua_node   node_id="ns=2;i=3"
+→ Node ns=2;i=3 value: 23.101165241243347
+
+write_opcua_node  node_id="ns=2;i=13"  value="80"
+→ Successfully wrote 80 to node ns=2;i=13
+
+get_all_variables
+→ Found 22 variables:
+
+  - Name: Temperature
+    NodeID: ns=2;i=3
+    Object ID: ns=2;i=2
+    Value: 26.34449150525422
+    Data Type: ns=0;i=11
+    Description: Temperature
+  …
+
+read_history_opcua_node  node_id="ns=2;i=3"  num_values=2
+→ [ { "value": { "dataType": "Double", "value": 23.198876064466138 },
+      "statusCode": { "value": 0 },
+      "sourceTimestamp": "2026-09-09T21:11:09.043Z" }, … ]
+```
+
+Bad input is rejected identically by both runtimes:
+
+```
+read_history_opcua_node  node_id="ns=2;i=3"  start_time="2026-02-30T00:00:00Z"
+→ Error: Invalid date/time: "2026-02-30T00:00:00Z". Use ISO 8601, e.g. 2026-04-23T17:40:00Z
+```
+
+## Configuration
+
+Both runtimes read a single environment variable:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OPCUA_SERVER_URL` | `opc.tcp://localhost:4840` | OPC UA endpoint to connect to |
+
+## Installation
+
+Most users need only the [Quick Start](#quick-start) config above — `npx` and
+`uvx` fetch the package on demand. To install it permanently:
+
+```bash
+# Node
+npm install -g opcua-mcp-server
+opcua-mcp-server            # also available as: opcua-mcp
+
+# Python
+uv tool install opcua-mcp-server   # or: pip install opcua-mcp-server
+opcua-mcp-server
+```
 
 | | Python | Node |
 |---|---|---|
 | Requires | Python 3.10+ | Node 18+ |
+| Package | [PyPI `opcua-mcp-server`](https://pypi.org/project/opcua-mcp-server/) | [npm `opcua-mcp-server`](https://www.npmjs.com/package/opcua-mcp-server) |
 | Framework | FastMCP | `@modelcontextprotocol/sdk` |
 | OPC UA library | `opcua` (FreeOpcUa) | `node-opcua` |
 | Source | `packages/server-python/` | `packages/server-node/` |
-| Run | `uvx opcua-mcp-server` | `npx opcua-mcp-server` |
 
 Exact dependency versions live in the manifests
 ([`pyproject.toml`](packages/server-python/pyproject.toml),
 [`package.json`](packages/server-node/package.json)) rather than being restated
 here, where they would drift.
 
-## Tools
+## Try it against the mock
 
-Both servers expose the same MCP tools — read / write / browse nodes, batch read & write, call methods, list all variables, plus capability-gated history and aggregate reads. The full per-tool reference (inputs, outputs, and a node-ID map) is in **[docs/examples.md](docs/examples.md)**, and the tool surface is defined once in [`contract/tools.json`](contract/tools.json) (both servers derive from it).
+The repo ships a simulated industrial plant — sensors, actuators, methods and
+history — so you can try the tools without touching real equipment.
 
-## Deployment & Installation
-
-### Python Version
 ```bash
-# Install the Python workspace (from the repo root)
+git clone https://github.com/midhunxavier/OPCUA-MCP.git && cd OPCUA-MCP
 uv sync --all-packages
-
-# Run the Python server
-uv run --no-sync opcua-mcp-server
+uv run --no-sync opcua-mock-server     # listens on opc.tcp://localhost:4840/freeopcua/server/
 ```
 
-### Node Version
-```bash
-# Direct usage (recommended)
-npx opcua-mcp-server
+Then point your MCP client at
+`opc.tcp://localhost:4840/freeopcua/server/`. See
+[`.mcp.json.example`](.mcp.json.example) for a ready-made config, and
+[docs/testing.md](docs/testing.md) for an MCP Inspector walkthrough and example
+prompts.
 
-# Global installation
-npm install -g opcua-mcp-server
-opcua-mcp-server
-
-# Development
-npm install
-npm run build
-npm start
-```
-
-**NPM Package**: https://www.npmjs.com/package/opcua-mcp-server
-
-## Configuration
-
-Both versions use the same environment variable:
-- `OPCUA_SERVER_URL`: OPC UA server endpoint (default: `opc.tcp://localhost:4840`)
-
-### Python Configuration Example
-```json
-{
-  "mcpServers": {
-    "opcua-python": {
-      "command": "/Users/mx/.local/bin/uv",
-      "args": [
-        "--directory",
-        "/path/to/packages/server-python",
-        "run",
-        "opcua-mcp-server"
-      ],
-      "env": {
-        "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
-      }
-    }
-  }
-}
-```
-
-### Node Configuration Example
-```json
-{
-  "mcpServers": {
-    "opcua-node": {
-      "command": "npx",
-      "args": ["opcua-mcp-server"],
-      "env": {
-        "OPCUA_SERVER_URL": "opc.tcp://localhost:4840"
-      }
-    }
-  }
-}
-```
-
-## Testing
-
-There are three ways to exercise the servers — the automated suite, the MCP
-Inspector (UI or CLI), and an AI agent (Claude Code / Desktop / Cursor). Start the
-mock server first, then:
+## Development & testing
 
 ```bash
-uv sync --all-packages              # one-time, from the repo root
-cd tests && uv run --no-sync pytest -v    # end-to-end suite, both servers
+uv sync --all-packages                      # one-time workspace setup
+cd tests
+uv run --no-sync pytest unit/               # fast, no server needed (<1s)
+uv run --no-sync pytest                     # unit + end-to-end, both runtimes
+uv run --no-sync pytest -m smoke smoke/     # published-artifact smoke tests
 ```
 
-See **[docs/testing.md](docs/testing.md)** for the full guide (Inspector walkthrough, AI-agent
-setup, example prompts, troubleshooting) and **[docs/examples.md](docs/examples.md)** for
-per-tool inputs/outputs and a node-ID reference.
-
-## Contributing
-
-Contributions are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for project
-layout, local development, adding a new tool to both servers, and PR conventions.
-
+Full guide, including the MCP Inspector and AI-agent walkthroughs:
+**[docs/testing.md](docs/testing.md)**. Project layout and how to add a tool:
+**[CONTRIBUTING.md](CONTRIBUTING.md)**. How it fits together:
+**[docs/architecture.md](docs/architecture.md)**.
 
 ## Security
 
-Both versions currently connect with:
-- `SecurityPolicy.None`
-- `MessageSecurityMode.None`
+> [!WARNING]
+> Both runtimes currently connect with `SecurityPolicy.None` and
+> `MessageSecurityMode.None` — **unauthenticated and unencrypted**. This is fine
+> for the bundled mock and local development. **Do not point it at production
+> industrial equipment as-is.**
 
-For production use, both should implement:
-- Certificate-based authentication
-- Encrypted communication
-- User authentication
-- Input validation
+Configurable security policies, certificate-based authentication and user
+credentials are planned; see [SECURITY.md](SECURITY.md) for the current posture
+and how to report a vulnerability.
 
+Note also that this server can **write** to nodes and **call methods** on real
+equipment. Scope the OPC UA user account you connect with to exactly what you
+intend the assistant to be able to do.
+
+## Contributing
+
+Contributions are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for
+project layout, local development, adding a new tool to both servers, and PR
+conventions. Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

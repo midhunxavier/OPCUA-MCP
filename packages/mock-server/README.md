@@ -51,7 +51,7 @@ A comprehensive mockup OPC UA server for industrial control systems, featuring r
 
 ## Installation
 
-1. Ensure you have Python 3.13+ installed
+1. Ensure you have Python 3.10+ installed
 2. Install dependencies for the whole workspace (run from the repo root):
    ```bash
    uv sync --all-packages

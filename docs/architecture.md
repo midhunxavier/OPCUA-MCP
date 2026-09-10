@@ -30,7 +30,13 @@ The contract also pins what the tools *return*, where the answer is more than
 free text. A tool names a shape from `resultShapes`; the history family
 (`read_history_opcua_node`, `read_aggregate_opcua_node`) shares
 `historyRecords`, one flat `{value, timestamp, status}` record per historical
-value or aggregate interval. That was the second half of interchangeability, and
+value or aggregate interval. The `value` encoding keys on the OPC UA data type
+rather than the language one — python-opcua and node-opcua represent the same
+reading with entirely different native types (a ByteString is `bytes` vs a
+`Buffer`, an Int64 a plain int vs a `[high, low]` pair), so anything reaching for
+the runtime type diverges by construction. `tests/fixtures/value-encoding.json`
+is the shared table, and both unit suites build the native value for every case
+in it and assert the same JSON comes out. That was the second half of interchangeability, and
 for a while it was missing: both servers matched on names and parameters but the
 Node one returned raw `node-opcua` `DataValue` JSON while the Python one returned
 flat records, so a client that learned one misread the other.

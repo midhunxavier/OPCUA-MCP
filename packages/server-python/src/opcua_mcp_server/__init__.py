@@ -13,7 +13,7 @@ from __future__ import annotations
 from .config import SERVER_URL
 from .contract import CONTRACT, DESC, HISTORY_NODE_ID, load_contract
 from .datetimes import format_iso_utc, parse_iso_datetime
-from .records import history_record, history_records, json_value
+from .records import history_record, history_records, scalar_to_json, variant_to_json
 from .server import main, mcp
 
 __all__ = [
@@ -24,9 +24,10 @@ __all__ = [
     "format_iso_utc",
     "history_record",
     "history_records",
-    "json_value",
     "load_contract",
     "main",
     "mcp",
     "parse_iso_datetime",
+    "scalar_to_json",
+    "variant_to_json",
 ]

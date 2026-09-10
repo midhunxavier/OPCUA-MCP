@@ -1,0 +1,133 @@
+{
+  "$comment": "The canonical JSON encoding of an OPC UA value, per data type — the `value` field of contract/tools.json -> resultShapes.historyRecords. Both servers must produce `expected` for the same reading, so this file is the shared expectation: tests/unit/test_records.py and packages/server-node/test/unit.test.mjs each build the native value for every case name below and assert the result matches. Neither suite may skip a case, so adding one here forces both runtimes to handle it. Encodings follow OPC UA Part 6's JSON encoding where it defines one (base64 for ByteString, ISO-8601 for DateTime, a JSON string for 64-bit integers that cannot survive as a JSON number).",
+  "cases": [
+    {
+      "name": "boolean",
+      "type": "Boolean",
+      "expected": true,
+      "note": "Booleans stay booleans; they must never arrive as 1/0 or \"True\"."
+    },
+    {
+      "name": "int32",
+      "type": "Int32",
+      "expected": 42
+    },
+    {
+      "name": "int64_small",
+      "type": "Int64",
+      "expected": 5,
+      "note": "node-opcua carries Int64 as a [high, low] pair of 32-bit halves; python-opcua as a plain int. Both must land on the same JSON number."
+    },
+    {
+      "name": "int64_negative",
+      "type": "Int64",
+      "expected": -5,
+      "note": "The [high, low] pair is two's complement: -5 is [4294967295, 4294967291]."
+    },
+    {
+      "name": "int64_beyond_double",
+      "type": "Int64",
+      "expected": "9007199254740993",
+      "note": "2^53+1. A JSON *number* loses digits here in any JS parser, so both servers switch to a decimal string at the same threshold rather than one of them silently rounding."
+    },
+    {
+      "name": "uint64_max",
+      "type": "UInt64",
+      "expected": "18446744073709551615"
+    },
+    {
+      "name": "double",
+      "type": "Double",
+      "expected": 51.75
+    },
+    {
+      "name": "double_nan",
+      "type": "Double",
+      "expected": "NaN",
+      "note": "JSON has no NaN. Emitting a bare NaN produces output that strict parsers reject, so it becomes a string."
+    },
+    {
+      "name": "double_infinity",
+      "type": "Double",
+      "expected": "Infinity"
+    },
+    {
+      "name": "string",
+      "type": "String",
+      "expected": "AUTO"
+    },
+    {
+      "name": "datetime",
+      "type": "DateTime",
+      "expectedPattern": "^2026-09-09T13:36:01\\.468(000)?Z$",
+      "note": "A pattern, not a literal: node-opcua's Date holds milliseconds while python-opcua decodes the full microsecond resolution, and truncating Python would discard real data to match a JS limitation. This is the one permitted difference, and it is the same one the `timestamp` field carries."
+    },
+    {
+      "name": "guid",
+      "type": "Guid",
+      "expected": "72962b91-fa75-4ae6-8d28-b404dc7daf63",
+      "note": "Lower-case, the RFC 4122 canonical form. node-opcua renders GUIDs upper-case."
+    },
+    {
+      "name": "bytestring",
+      "type": "ByteString",
+      "expected": "YWJj",
+      "note": "base64 of b\"abc\". python-opcua supplies bytes and node-opcua a Buffer; without an explicit rule these became \"b'abc'\" and [97, 98, 99] respectively."
+    },
+    {
+      "name": "nodeid",
+      "type": "NodeId",
+      "expected": "ns=2;i=3"
+    },
+    {
+      "name": "statuscode",
+      "type": "StatusCode",
+      "expected": "Good",
+      "note": "The name alone, matching the record's own `status` field."
+    },
+    {
+      "name": "qualifiedname",
+      "type": "QualifiedName",
+      "expected": "2:Temperature"
+    },
+    {
+      "name": "localizedtext",
+      "type": "LocalizedText",
+      "expected": "Ambient temperature",
+      "note": "The text only. The locale is dropped: it is not part of the reading."
+    },
+    {
+      "name": "double_array",
+      "type": "Double",
+      "expected": [1.5, 2.5]
+    },
+    {
+      "name": "byte_array",
+      "type": "Byte",
+      "expected": [97, 98, 99],
+      "note": "An array of Byte is an array of numbers — unlike a ByteString, which is one opaque blob."
+    },
+    {
+      "name": "int64_array",
+      "type": "Int64",
+      "expected": [5, "9007199254740993"],
+      "note": "Element-wise, so one oversized element does not stringify the rest."
+    },
+    {
+      "name": "bytestring_array",
+      "type": "ByteString",
+      "expected": ["YWI=", "Yw=="]
+    },
+    {
+      "name": "empty_array",
+      "type": "Double",
+      "expected": []
+    },
+    {
+      "name": "null",
+      "type": "Null",
+      "expected": null,
+      "note": "No value at all — an aggregate interval the server holds no data for."
+    }
+  ]
+}

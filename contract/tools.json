@@ -9,7 +9,7 @@
         "type": "object",
         "properties": {
           "value": {
-            "description": "The recorded value: JSON-native when the OPC UA type maps onto JSON (number, boolean, string, or an array of those), otherwise its string form. null for an interval the server holds no data for."
+            "description": "The recorded value, encoded per its OPC UA data type: numbers, booleans and strings stay themselves; a ByteString is base64; a DateTime is ISO-8601 UTC; a Guid is a lower-case UUID; NodeId, StatusCode, QualifiedName and LocalizedText are their canonical text forms; an Int64/UInt64 outside the range a JSON number can hold exactly, and a non-finite Double, become strings (\"9007199254740993\", \"NaN\"); an array value is a JSON array of those. null for an interval the server holds no data for. The full table, and the fact that both servers produce the same encoding for the same reading, is pinned by tests/fixtures/value-encoding.json."
           },
           "timestamp": {
             "type": ["string", "null"],

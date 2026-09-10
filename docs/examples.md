@@ -165,7 +165,7 @@ as one content block each:
 
 | Field | Meaning |
 |---|---|
-| `value` | The recorded value, JSON-native where the OPC UA type allows (a number stays a number). `null` for an interval with no data. |
+| `value` | The recorded value, encoded per its OPC UA data type — a number stays a number, a ByteString is base64, a DateTime is ISO-8601 UTC, a NodeId is `ns=2;i=3`. `null` for an interval with no data. The full table is `../tests/fixtures/value-encoding.json`. |
 | `timestamp` | Source timestamp, ISO-8601 UTC — the same format `start_time`/`end_time` accept. |
 | `status` | OPC UA status code name, e.g. `Good`, `BadNoData`. |
 

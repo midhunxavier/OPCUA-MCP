@@ -73,7 +73,7 @@ Things to try:
 |------|-----------|----------|
 | `read_opcua_node` | `node_id` = `ns=2;i=3` | `Node ns=2;i=3 value: 26.x` |
 | `get_all_variables` | *(none)* | `Found 22 variables: …` |
-| `read_history_opcua_node` | `node_id` = `ns=2;i=3`, `num_values` = `5` | array of 5 timestamped records, status `Good` |
+| `read_history_opcua_node` | `node_id` = `ns=2;i=3`, `num_values` = `5` | 5 records of `{ value, timestamp, status }`, status `Good`, ISO-8601 UTC timestamps — identical on both servers |
 | `read_history_opcua_node` | `node_id` = `ns=2;i=3`, `start_time` = `2026-01-01T00:00:00Z` | records within the window |
 | `read_history_opcua_node` | `node_id` = `ns=2;i=3`, `start_time` = `nope` | clear error: *Use ISO 8601…* |
 | `write_opcua_node` | `node_id` = `ns=2;i=13`, `value` = `80` | `Successfully wrote 80…` |

@@ -20,6 +20,23 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { OpcuaConnection } from "./connection.js";
 import { CONTRACT } from "./contract.js";
 import { toDate } from "./dates.js";
+import { toHistoryRecords } from "./records.js";
+
+/** A history/aggregate response: one text block per canonical record.
+ *
+ * The framing is part of the contract (resultShapes.historyRecords), not an
+ * implementation detail: FastMCP splits the Python server's returned list into
+ * one block per element, so the Node server does the same rather than emitting a
+ * single array — the two servers' responses are then read the same way.
+ */
+function historyResult(dataValues: DataValue[] | null | undefined) {
+  return {
+    content: toHistoryRecords(dataValues).map((record) => ({
+      type: "text",
+      text: JSON.stringify(record, null, 2),
+    })),
+  };
+}
 
 export class OpcuaTools {
   private aggregateFunctions: string[] = [];
@@ -199,14 +216,7 @@ export class OpcuaTools {
         );
       }
       const dataValues = (historyValues[0].historyData as HistoryData).dataValues;
-      return {
-        content: [
-          {
-            type: "text",
-            text: `${JSON.stringify(dataValues, null, 2)}`,
-          },
-        ],
-      };
+      return historyResult(dataValues);
     } catch (error) {
       throw new Error(
         `Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`
@@ -254,14 +264,7 @@ export class OpcuaTools {
         );
       }
       const dataValues = (historyValues.historyData as HistoryData).dataValues;
-      return {
-        content: [
-          {
-            type: "text",
-            text: `${JSON.stringify(dataValues, null, 2)}`,
-          },
-        ],
-      };
+      return historyResult(dataValues);
     } catch (error) {
       throw new Error(
         `Failed to read node ${nodeId}: ${error instanceof Error ? error.message : String(error)}`

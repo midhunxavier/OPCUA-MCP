@@ -151,24 +151,30 @@ functions (so the aggregate tool stays hidden).
 Read recorded historical values for a node. Exposed only when the server
 advertises `AccessHistoryDataCapability`.
 
-Python:
-```json
-{ "node_id": "ns=2;i=3", "num_values": 3 }
-```
-```json
-[ { "value": "26.01", "timestamp": "2026-06-05 09:55:03.382152", "status": "Good" } ]
-```
-
-Node (also accepts ISO-8601 `start_time`/`end_time`):
 ```json
 { "node_id": "ns=2;i=3", "start_time": "2026-06-05T09:50:00Z",
   "end_time": "2026-06-05T10:30:00Z", "num_values": 3 }
 ```
+
+Both servers answer with the same records — one per historical value, returned
+as one content block each:
+
 ```json
-[ { "value": { "dataType": "Double", "value": 25 },
-    "statusCode": { "value": 0 },
-    "sourceTimestamp": "2026-06-05T09:53:40.950Z" } ]
+{ "value": 26.01, "timestamp": "2026-06-05T09:55:03.382Z", "status": "Good" }
 ```
+
+| Field | Meaning |
+|---|---|
+| `value` | The recorded value, JSON-native where the OPC UA type allows (a number stays a number). `null` for an interval with no data. |
+| `timestamp` | Source timestamp, ISO-8601 UTC — the same format `start_time`/`end_time` accept. |
+| `status` | OPC UA status code name, e.g. `Good`, `BadNoData`. |
+
+The shape is defined once, in `../contract/tools.json` under
+`resultShapes.historyRecords`, and both servers are held to it by
+`../tests/e2e/test_contract_parity.py`. Earlier versions of the Node server
+returned raw `DataValue` JSON here instead
+(`{"statusCode": {"value": 0}, "sourceTimestamp": …}`); see `../CHANGELOG.md`.
+
 > Prompt: *"Show the last 5 temperature readings from history."*
 
 ### `read_aggregate_opcua_node`
@@ -179,6 +185,14 @@ functions** — the bundled mock does not, so this tool is not exposed against i
 { "node_id": "ns=2;i=3", "start_time": "2026-06-05T09:50:00Z",
   "aggregate_function": "Average", "processing_interval": 60000 }
 ```
+
+The result uses the same record shape as `read_history_opcua_node` above, one
+record per interval:
+
+```json
+{ "value": 25.83, "timestamp": "2026-06-05T09:50:00.000Z", "status": "Good" }
+```
+
 > Prompt: *"What was the average temperature per minute over the last hour?"*
 
 ---

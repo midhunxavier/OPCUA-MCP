@@ -10,6 +10,7 @@ import test, { describe } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { toDate } from "../build/dates.js";
+import { toHistoryRecords, toIsoUtc, toJsonValue } from "../build/records.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -72,6 +73,58 @@ describe("toDate", () => {
     // 2026-03-01T01:00+02:00 is 2026-02-28T23:00Z — the UTC day differs from the
     // string's day, which must not be mistaken for an impossible date.
     assert.equal(toDate("2026-03-01T01:00:00+02:00").toISOString(), "2026-02-28T23:00:00.000Z");
+  });
+});
+
+// The canonical history-family record shape (contract -> resultShapes.historyRecords).
+// The Python server's equivalent tests are in tests/unit/test_records.py; both
+// assert the same shape, because a client must be able to read either server.
+describe("history records", () => {
+  /** A minimal DataValue stand-in — the fields toHistoryRecord actually reads. */
+  const dataValue = (value, { timestamp = new Date("2026-09-09T13:36:01.139Z"), status } = {}) => ({
+    value: value === undefined ? undefined : { value },
+    sourceTimestamp: timestamp,
+    statusCode: status === undefined ? undefined : { name: status },
+  });
+
+  test("flattens a DataValue to {value, timestamp, status}", () => {
+    assert.deepEqual(toHistoryRecords([dataValue(51.75, { status: "Good" })]), [
+      { value: 51.75, timestamp: "2026-09-09T13:36:01.139Z", status: "Good" },
+    ]);
+  });
+
+  test("keeps the value JSON-native rather than stringifying it", () => {
+    assert.equal(toJsonValue(51.75), 51.75);
+    assert.equal(toJsonValue(true), true);
+    assert.equal(toJsonValue("AUTO"), "AUTO");
+    assert.deepEqual(toJsonValue(new Float64Array([1, 2])), [1, 2]);
+  });
+
+  test("an empty aggregate interval is null, not a stringified placeholder", () => {
+    const [record] = toHistoryRecords([dataValue(undefined, { status: "BadNoData" })]);
+    assert.equal(record.value, null);
+    assert.equal(record.status, "BadNoData");
+  });
+
+  test("an absent status code means Good", () => {
+    assert.equal(toHistoryRecords([dataValue(1)])[0].status, "Good");
+  });
+
+  test("stringifies values JSON cannot carry", () => {
+    assert.equal(toJsonValue(NaN), "NaN");
+    assert.equal(toJsonValue(Infinity), "Infinity");
+    assert.equal(toJsonValue({ toString: () => "ns=2;i=3" }), "ns=2;i=3");
+  });
+
+  test("timestamps are ISO-8601 UTC with a trailing Z", () => {
+    assert.equal(toIsoUtc(new Date("2026-09-09T15:36:01.468+02:00")), "2026-09-09T13:36:01.468Z");
+    assert.equal(toIsoUtc(undefined), null);
+    assert.equal(toIsoUtc(new Date("nope")), null);
+  });
+
+  test("no data values is an empty record list", () => {
+    assert.deepEqual(toHistoryRecords(undefined), []);
+    assert.deepEqual(toHistoryRecords([]), []);
   });
 });
 

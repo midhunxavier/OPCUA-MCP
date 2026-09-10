@@ -26,10 +26,20 @@ That interchangeability is not maintained by discipline. It is maintained by
 | **Node** | Builds its `tools/list` response directly from it. `npm run build` copies it to `build/contract.json` so the npm package is self-contained. |
 | **Python** | Reads tool descriptions and capability node IDs from it. Input schemas are derived by FastMCP from the function signatures, and checked against the contract by a test. |
 
+The contract also pins what the tools *return*, where the answer is more than
+free text. A tool names a shape from `resultShapes`; the history family
+(`read_history_opcua_node`, `read_aggregate_opcua_node`) shares
+`historyRecords`, one flat `{value, timestamp, status}` record per historical
+value or aggregate interval. That was the second half of interchangeability, and
+for a while it was missing: both servers matched on names and parameters but the
+Node one returned raw `node-opcua` `DataValue` JSON while the Python one returned
+flat records, so a client that learned one misread the other.
+
 `tests/e2e/test_contract_parity.py` starts both servers and asserts each
 advertises exactly the contract's applicable tools, with matching descriptions
-and parameter sets. `tests/unit/test_contract.py` checks the contract file itself
-is well-formed.
+and parameter sets, and that what each actually returns satisfies the declared
+`resultShape`. `tests/unit/test_contract.py` checks the contract file itself is
+well-formed.
 
 **Adding a tool** therefore means editing the contract, adding the per-tool logic
 in each runtime, and adding a test — see [CONTRIBUTING.md](../CONTRIBUTING.md).
@@ -82,9 +92,9 @@ the repo.
 contract/tools.json          single source of truth for the tool surface
 packages/server-python/      FastMCP + opcua (FreeOpcUa)
   src/opcua_mcp_server/      config · contract · datetimes · capabilities
-                             · aggregates · server
+                             · aggregates · records · server
 packages/server-node/        @modelcontextprotocol/sdk + node-opcua
-  src/                       config · contract · dates · connection
+  src/                       config · contract · dates · records · connection
                              · tools · index
 packages/mock-server/        simulated PLC/sensors (:4840, no aggregates)
 packages/mock-server-aggregate/  aggregate-capable mock (:4841)

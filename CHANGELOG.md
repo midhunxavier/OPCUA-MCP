@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING (Node server): `read_history_opcua_node` and
+  `read_aggregate_opcua_node` now return flat records instead of raw
+  `DataValue` JSON.** The two servers answered the same tool call with different
+  shapes — the Node server with node-opcua's internal representation
+  (`{"value": {"dataType": "Double", "value": 51.75}, "statusCode": {"value": 1},
+  "sourceTimestamp": …}`), the Python server with `{value, timestamp, status}`.
+  Both were "correct": `contract/tools.json` unified tool names, descriptions and
+  capability gating, but said nothing about output. A client — or a model — that
+  learned one server's output misread the other's.
+
+  The contract now declares the shape, under `resultShapes.historyRecords`, and
+  both servers produce it:
+
+  ```json
+  { "value": 51.75, "timestamp": "2026-09-09T13:36:01.139Z", "status": "Good" }
+  ```
+
+  One record per historical value or aggregate interval, one MCP content block
+  per record. Anything consuming the Node server's `sourceTimestamp` /
+  `statusCode.value` / nested `value.value` must move to `timestamp` / `status` /
+  `value`. (#23)
+
+- **BREAKING (Python server): history timestamps are ISO-8601 UTC**, e.g.
+  `2026-09-09T13:36:01.468091Z` rather than `str(datetime)`'s
+  `2026-09-09 13:36:01.468000` — space-separated and with no zone. The same tools
+  already *accept* ISO-8601 for `start_time`/`end_time`, so their output now
+  round-trips back into their input. (#23)
+
+- **BREAKING (Python server): history values keep their JSON type.** A Double
+  arrives as `51.75`, not `"51.75"`, and an aggregate interval the server holds
+  no data for is `null` rather than the string `"None"`. Values OPC UA can carry
+  but JSON cannot (DateTimes, NodeIds, ExtensionObjects) are still stringified.
+  (#23)
+
 ### Fixed
 - Corrected the READMEs for the published packages: the PyPI long description
   claimed Python 3.13+ (the floor is 3.10), had no install instructions for the

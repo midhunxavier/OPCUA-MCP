@@ -134,10 +134,14 @@ get_all_variables
   …
 
 read_history_opcua_node  node_id="ns=2;i=3"  num_values=2
-→ [ { "value": { "dataType": "Double", "value": 23.198876064466138 },
-      "statusCode": { "value": 0 },
-      "sourceTimestamp": "2026-09-09T21:11:09.043Z" }, … ]
+→ { "value": 24.231991377989036, "timestamp": "2026-09-10T13:15:12.214Z", "status": "Good" }
+  { "value": 26.089859958260515, "timestamp": "2026-09-10T13:15:11.208Z", "status": "Good" }
 ```
+
+Both runtimes return that same record shape — one record per historical value —
+for `read_history_opcua_node` and `read_aggregate_opcua_node` alike. It is
+defined in `contract/tools.json` (`resultShapes.historyRecords`) and enforced
+against both servers by the test suite.
 
 Bad input is rejected identically by both runtimes:
 
